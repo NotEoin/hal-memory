@@ -124,11 +124,20 @@ def build_indexes() -> int:
     return written
 
 
+CODE = re.compile(r"```.*?```|`[^`\n]*`", re.S)
+
+
+def _real_links(body: str) -> list[str]:
+    """Wikilinks outside code blocks with a target; a Dataview 'FROM [[]]' is not a link."""
+    return [t for t in LINK.findall(CODE.sub("", body)) if t.strip()]
+
+
 def _related(path: Path, limit: int = 3) -> list[str]:
     from .search import semantic
     text = vault.split(path.read_text(errors="ignore"))[1]
     hits = semantic(f"{path.stem}\n{text[:800]}", limit + 1)
-    return [h["note"] for h in hits if h["note"] != path.stem][:limit]
+    floor = float(settings().get("related_min", 0.8))
+    return [h["note"] for h in hits if h["note"] != path.stem and h.get("score", 0) >= floor][:limit]
 
 
 def fix(limit: int | None = None) -> dict:
@@ -154,13 +163,17 @@ def fix(limit: int | None = None) -> dict:
         if linker.link_note(p):
             done["linked"] += 1
         text = p.read_text(errors="ignore")
-        if model_ok and "no-links" in found and "[[" not in vault.split(text)[1]:
+        if model_ok and "no-links" in found and not _real_links(vault.split(text)[1]):
             try:
                 rel = _related(p)
             except llm.Unavailable:
                 rel, model_ok = [], False
             if rel:
-                p.write_text(text.rstrip("\n") + "\n\nRelated: " + ", ".join(f"[[{n}]]" for n in rel) + "\n")
+                # Before a trailing Dataview block, so the query stays the last thing in a stub.
+                line = "Related: " + ", ".join(f"[[{n}]]" for n in rel) + "\n"
+                marker = "\n## Appears in"
+                text = text.replace(marker, f"\n{line}{marker}", 1) if marker in text else text.rstrip("\n") + f"\n\n{line}"
+                p.write_text(text)
                 done["related"] += 1
         if gpu_free and "needs-review" in found:
             done["reclassified"] += _reclassify(p)
