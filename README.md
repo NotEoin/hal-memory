@@ -33,7 +33,7 @@ systemctl --user enable --now hal-memory-idle.service
 
 ## Use
 
-Every tool runs from the command line, or through hal-hub as `hal memory_<tool>`:
+Every tool runs from the command line, or through hal-hub as `hal-hub memory_<tool>`:
 
 ```bash
 cd ~/src/hal-ecosystem/hal-memory
