@@ -55,6 +55,13 @@ class MemoryTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.vault.inside(Path("../outside.md"))
 
+    def test_empty_notes_count_as_indexed(self):
+        from halmem import search
+        search.llm.embed = lambda texts, timeout=120: [[1.0, 0.0] for _ in texts]
+        (Path(self.tmp.name) / "vault" / "Empty.md").write_text("---\ntags: []\n---\n")
+        self.assertEqual(search.update_index()["waiting"], 0)
+        self.assertEqual(search.update_index()["embedded"], 0)
+
     def test_facts_are_not_duplicated(self):
         from halmem import capture
         self.assertEqual(capture.add_fact("Prefers tea"), "added")

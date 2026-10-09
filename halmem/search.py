@@ -74,6 +74,10 @@ def update_index(limit: int | None = None) -> dict:
     for r, p, m in todo[:limit]:
         chunks = [c for c in _chunks(p.read_text(errors="ignore")) if c.strip()]
         if not chunks:
+            # Recorded with no vector, so an empty note counts as indexed instead of waiting forever.
+            con.execute("DELETE FROM chunks WHERE path = ?", (r,))
+            con.execute("INSERT INTO chunks VALUES (?, ?, 0, '', ?)", (r, m, b""))
+            done += 1
             continue
         vecs = llm.embed([f"{p.stem}\n{c}" for c in chunks])
         con.execute("DELETE FROM chunks WHERE path = ?", (r,))
@@ -89,7 +93,7 @@ def update_index(limit: int | None = None) -> dict:
 def semantic(query: str, limit: int = 8) -> list[dict]:
     """Returns the note chunks closest in meaning to the query."""
     q = llm.embed([query])[0]
-    rows = _db().execute("SELECT path, n, text, vec FROM chunks").fetchall()
+    rows = _db().execute("SELECT path, n, text, vec FROM chunks WHERE length(vec) > 0").fetchall()
     if not rows:
         return []
     try:
