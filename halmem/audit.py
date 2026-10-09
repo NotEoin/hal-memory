@@ -100,10 +100,16 @@ def status() -> dict:
     return {"problems": counts}
 
 
+def _orphan_folders() -> list[str]:
+    """Folders holding notes that nothing links to, so they get an index note too."""
+    rows = _db().execute("SELECT path FROM notes WHERE issues LIKE '%orphan%'").fetchall()
+    return sorted({str(Path(r).parent) for (r,) in rows if str(Path(r).parent) not in (".", INDEX_DIR)})
+
+
 def build_indexes() -> int:
-    """Writes one index note per managed folder, so every note in it has a backlink."""
+    """Writes one index note per managed folder, and per folder with orphans, so every note has a backlink."""
     written = 0
-    for folder in INDEXED:
+    for folder in dict.fromkeys([*INDEXED, *_orphan_folders()]):
         d = vault.root() / folder
         if not d.exists():
             continue
@@ -177,6 +183,12 @@ def fix(limit: int | None = None) -> dict:
                 done["related"] += 1
         if gpu_free and "needs-review" in found:
             done["reclassified"] += _reclassify(p)
+        if "no-frontmatter" in found:
+            text = p.read_text(errors="ignore")
+            kind = Path(r).parts[-2].lower().rstrip("s") if len(Path(r).parts) > 1 else "note"
+            created = time.strftime("%Y-%m-%d", time.localtime(p.stat().st_mtime))
+            p.write_text(vault.set_fields(text, {"type": kind, "created": created, "hal": "ok"}))
+            done["frontmatter"] = done.get("frontmatter", 0) + 1
         meta = vault.fields(p.read_text(errors="ignore"))
         if meta.get("hal") == "needs-index":
             p.write_text(vault.set_fields(p.read_text(errors="ignore"), {"hal": "ok"}))
