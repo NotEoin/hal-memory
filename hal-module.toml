@@ -1,0 +1,132 @@
+[module]
+name = "memory"
+summary = "Lasting memory in one Obsidian vault: capture, search, recall and tidy"
+python = "halmem.tools"
+
+[[tools]]
+name = "memory_remember"
+function = "remember"
+description = "Save something to Hal's memory (the vault inbox) to be filed and linked later. Use for anything the user says to remember, notes, ideas, facts about people or plans."
+keywords = "note save write down idea"
+[tools.params.text]
+description = "what to remember, in full"
+required = true
+[tools.params.title]
+description = "short title"
+[tools.params.tags]
+type = "array"
+description = "tags"
+
+[[tools]]
+name = "memory_fact"
+function = "remember_fact"
+description = "Record a lasting fact about the user (a preference, routine, detail about their life) in their profile, which Hal reads first."
+keywords = "preference profile about me like dislike"
+[tools.params.fact]
+description = "the fact, as one sentence"
+required = true
+
+[[tools]]
+name = "memory_profile"
+function = "profile"
+description = "Return everything Hal knows about the user from their profile note."
+keywords = "about me who am i"
+
+[[tools]]
+name = "memory_search"
+function = "search_notes"
+description = "Search the vault (notes, lectures, projects, conversations, people) by meaning and keywords. Returns matching notes with snippets."
+keywords = "find look up notes vault obsidian"
+[tools.params.query]
+description = "what to look for"
+required = true
+[tools.params.limit]
+type = "integer"
+description = "most results"
+
+[[tools]]
+name = "memory_recall"
+function = "recall"
+description = "Answer a question from the vault, citing the notes used. Use for 'what did I...', 'when did we...', 'what do my notes say about...'."
+keywords = "question answer remember recall what did i"
+timeout = 300
+[tools.params.question]
+description = "the question"
+required = true
+
+[[tools]]
+name = "memory_read"
+function = "read"
+description = "Read a note from the vault by its title or path."
+[tools.params.note]
+description = "note title or vault-relative path"
+required = true
+
+[[tools]]
+name = "memory_append"
+function = "append"
+description = "Add text to the end of an existing note."
+[tools.params.note]
+description = "note title or path"
+required = true
+[tools.params.text]
+description = "text to add"
+required = true
+
+[[tools]]
+name = "memory_log_conversation"
+function = "log_conversation"
+description = "Append one exchange to today's conversation log in the vault."
+[tools.params.user]
+required = true
+[tools.params.assistant]
+required = true
+[tools.params.channel]
+description = "voice, telegram or chat"
+
+[[tools]]
+name = "memory_daily"
+function = "daily"
+description = "Return today's daily note (or a given date's), creating it if needed."
+keywords = "journal today diary"
+[tools.params.date]
+description = "YYYY-MM-DD; today if empty"
+
+[[tools]]
+name = "memory_sort"
+function = "sort_inbox"
+description = "File inbox notes now: classify, title, tag, link and move them. Normally runs by itself when the PC is idle."
+timeout = 900
+[tools.params.limit]
+type = "integer"
+
+[[tools]]
+name = "memory_link"
+function = "link"
+description = "Run the wikilink pass: link mentions of existing notes in one note or across the vault."
+timeout = 600
+[tools.params.note]
+description = "note title or path; empty for a vault-wide pass"
+[tools.params.limit]
+type = "integer"
+
+[[tools]]
+name = "memory_tidy"
+function = "tidy"
+description = "Run a quality pass: audit changed notes and fix missing links, orphans and doubtful filings."
+timeout = 900
+[tools.params.limit]
+type = "integer"
+
+[[tools]]
+name = "memory_status"
+function = "status"
+description = "Report the vault's state: inbox size, notes needing review or links, and the last tidy pass."
+
+[[tools]]
+name = "memory_index"
+function = "update_index"
+description = "Update the semantic search index for notes that changed."
+timeout = 1800
+[tools.params.limit]
+type = "integer"
