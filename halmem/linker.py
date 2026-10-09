@@ -28,6 +28,14 @@ class Linker:
         self.pattern = re.compile(r"(?<![\w\[/])(" + "|".join(re.escape(n) for n in names) + r")(?![\w\]])",
                                   re.I) if names else None
 
+    def _linkable(self, key: str, found: str) -> bool:
+        """A one-word name links only as a proper noun or technical term: capitals in the
+        note's title and in the text ("Java", "GitHub"), so everyday words like "time" do not."""
+        if " " in key.strip():
+            return True
+        title = self.index[key].stem
+        return bool(re.search(r"[A-Z0-9]", title)) and bool(re.search(r"[A-Z0-9]", found))
+
     def link_text(self, body: str, self_name: str, limit: int) -> tuple[str, int]:
         """Returns the body with mentions linked, and how many links were added."""
         if self.pattern is None:
@@ -46,7 +54,7 @@ class Linker:
             def repl(m: re.Match) -> str:
                 nonlocal added
                 key = m.group(1).lower()
-                if key in done or added >= limit:
+                if key in done or added >= limit or not self._linkable(key, m.group(1)):
                     return m.group(1)
                 done.add(key)
                 added += 1
