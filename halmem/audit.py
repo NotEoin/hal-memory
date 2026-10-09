@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 from . import llm, vault
-from .config import data_dir, settings
+from .config import data_dir, settings, shared
 from .linker import Linker
 
 LINK = re.compile(r"\[\[([^\]|#]+)")
@@ -46,7 +46,13 @@ def _graph() -> tuple[dict[str, set[str]], dict[str, int]]:
     return out, back
 
 
+# Files that describe the vault or its folders rather than hold knowledge.
+SYSTEM_NOTES = {"readme", "claude", "claude-archive", "start here", "home"}
+
+
 def issues_for(path: Path, links: set[str], backlinks: int) -> list[str]:
+    if path.stem.lower() in SYSTEM_NOTES:
+        return []
     text = path.read_text(errors="ignore")
     meta = vault.fields(text)
     body = vault.split(text)[1].strip()
@@ -133,7 +139,9 @@ def fix(limit: int | None = None) -> dict:
                           ORDER BY checked LIMIT ?""", (limit,)).fetchall()
     linker = Linker()
     done = {"linked": 0, "related": 0, "reclassified": 0, "indexes": build_indexes()}
-    model_ok = llm.gpu_busy() is None
+    gpu_free = llm.gpu_busy() is None
+    # Related links only need embeddings; on the CPU they do not touch the GPU.
+    model_ok = gpu_free or bool(shared().get("embed_on_cpu"))
     for r, issues in rows:
         try:
             p = vault.inside(Path(r))
@@ -154,7 +162,7 @@ def fix(limit: int | None = None) -> dict:
             if rel:
                 p.write_text(text.rstrip("\n") + "\n\nRelated: " + ", ".join(f"[[{n}]]" for n in rel) + "\n")
                 done["related"] += 1
-        if model_ok and "needs-review" in found:
+        if gpu_free and "needs-review" in found:
             done["reclassified"] += _reclassify(p)
         meta = vault.fields(p.read_text(errors="ignore"))
         if meta.get("hal") == "needs-index":
