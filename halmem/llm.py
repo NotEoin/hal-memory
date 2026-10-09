@@ -72,4 +72,8 @@ def chat_json(system: str, user: str, **kw) -> dict:
 
 def embed(texts: list[str], timeout: float = 120) -> list[list[float]]:
     """Returns one embedding per text."""
-    return _post("/api/embed", {"model": shared()["embed_model"], "input": texts}, timeout)["embeddings"]
+    payload = {"model": shared()["embed_model"], "input": texts}
+    if shared().get("embed_on_cpu"):
+        # A small embedding model runs well on the CPU and leaves the GPU's memory alone.
+        payload["options"] = {"num_gpu": 0}
+    return _post("/api/embed", payload, timeout)["embeddings"]

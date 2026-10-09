@@ -82,7 +82,9 @@ review_below = 0.6       # confidence under which a filing needs review
 idea = "Areas/Personal/Ideas"
 ```
 
-Model work waits while another program holds the GPU; Hal's own voice server does not count.
+Model work waits while another program holds the GPU; Hal's own voice server does not count. Set
+`embed_on_cpu = true` in `[hal]` to keep the semantic index entirely off the GPU (a 300M embedding
+model is fast enough on the CPU).
 
 ## Licence
 
