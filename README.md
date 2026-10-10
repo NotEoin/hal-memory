@@ -33,13 +33,11 @@ Obsidian vault. numpy makes semantic search faster but is optional. Importing do
 `pdftotext`, `tesseract` and `pandoc` (and `python-pptx` for PowerPoint files).
 
 ```bash
-git clone <url> ~/src/hal-ecosystem/extensions/hal-memory
-~/src/hal-ecosystem/extensions/hal-memory/bin/hal-memory setup
-ln -s ~/src/hal-ecosystem/extensions/hal-memory/systemd/hal-memory-idle.service ~/.config/systemd/user/
-systemctl --user enable --now hal-memory-idle.service
+hal ext add memory
 ```
 
-`hal-memory setup` is safe to re-run. It:
+That clones it into the ecosystem's `extensions/` folder, runs `hal-memory setup` (its install
+step) and starts the idle sorter with Hal's other services. `hal-memory setup` is safe to re-run. It:
 
 | Step | What it does |
 | --- | --- |
