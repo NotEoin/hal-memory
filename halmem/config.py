@@ -37,6 +37,8 @@ DEFAULTS: dict = {
     "batch": 25,                # notes per pass, so a pass never runs for long
     "max_links_per_note": 40,
     "related_min": 0.8,         # semantic similarity a note needs to be listed as Related
+    "answerer": "local",        # who writes recall answers: local (the chat model) or claude (claude -p)
+    "university": "University", # root note of the study hierarchy that summarize builds
 }
 SHARED = {
     "vault": "~/Documents/vaults/Hal",
