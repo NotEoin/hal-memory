@@ -3,7 +3,7 @@ Description=Hal memory: sort, link and index the vault while the computer is idl
 After=graphical-session.target
 
 [Service]
-WorkingDirectory=%h/src/hal-ecosystem/hal-memory
+WorkingDirectory=%h/src/hal-ecosystem/extensions/hal-memory
 ExecStart=/usr/bin/python3 -m halmem.idle
 Environment=PYTHONUNBUFFERED=1
 Nice=10
