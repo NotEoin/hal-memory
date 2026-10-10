@@ -187,6 +187,18 @@ def mcp_file(path: Path, check: bool) -> int:
     return (len(changes) if check else 0) + (0 if hub else 1)
 
 
+def make_vault(root: Path, check: bool) -> int:
+    """Creates an empty vault (with its inbox) on a first install; an existing one is left alone."""
+    if root.is_dir():
+        return 0
+    if check:
+        say("todo", f"create the vault at {root} (or set [hal].vault to yours)")
+        return 1
+    (root / "+Inbox").mkdir(parents=True)
+    say("created", f"an empty vault at {root}; open it in Obsidian with 'Open folder as vault'")
+    return 0
+
+
 def link_bin(bin_dir: Path, check: bool) -> int:
     """Puts bin/hal-memory on the PATH through a symlink in `bin_dir`."""
     src = ROOT / "bin" / "hal-memory"
@@ -214,7 +226,8 @@ def run(check: bool = False, commands_dir: str | None = None, bin_dir: str | Non
     print(f"hal-memory setup{' --check' if check else ''}: vault {root}")
     todo = link_commands(commands, check) + link_bin(bins, check) + check_tools()
     todo += embed_model(check) if pull else 0
-    todo += mcp_file(root / ".mcp.json", check)
+    todo += make_vault(root, check)
+    todo += mcp_file(root / ".mcp.json", check) if root.is_dir() or not check else 0
     if not key_file().exists():
         say("todo", "save the Obsidian Local REST API key: hal-memory obsidian-key KEY")
         todo += 1

@@ -256,6 +256,15 @@ class SetupTest(Base):
         self.assertEqual(self.mcp.read_text(), mcp)
         self.assertFalse((self.commands / "ask.md.bak.1").exists())
 
+    def test_first_install_creates_the_vault(self):
+        from halmem import install
+        root = self.base / "new-vault"
+        self.assertEqual(install.make_vault(root, check=True), 1)
+        self.assertFalse(root.exists())
+        self.assertEqual(install.make_vault(root, check=False), 0)
+        self.assertTrue((root / "+Inbox").is_dir())
+        self.assertEqual(install.make_vault(root, check=False), 0)
+
     def test_merge_adds_obsidian_when_missing(self):
         from halmem import install
         cfg = {}
