@@ -20,6 +20,8 @@ from .config import data_dir, settings
 CHUNK = 1200        # characters per chunk
 MAX_CHUNKS = 12     # per note, so one huge note cannot dominate the index
 
+CONTEXT = 6000      # characters of notes given to the answering model, so a voice turn stays quick
+
 ANSWER = """Answer the question using only the vault notes given. Cite every note you use as
 [[Note title]]. If the notes do not answer it, say so plainly. Be brief."""
 
@@ -31,11 +33,35 @@ def _db() -> sqlite3.Connection:
     return con
 
 
+# Words that carry no meaning in a question, so "What did I decide about caching?" searches for
+# "decide" and "caching".
+STOP = set("""a an the and or but if then so of to in on at by for from with about into over under
+is are was were be been being am do does did done have has had having i me my mine we our us you your
+he she it its they them their this that these those what which who whom whose when where why how
+can could should would will shall may might must not no yes any all some each more most other such
+just than too very also only own same there here out up down off again once tell show find give know
+remember note notes vault anything something thing things""".split())
+
+
+def terms(query: str) -> list[str]:
+    """Returns the query's meaningful words: no stop words, nothing under three letters."""
+    seen = []
+    for w in re.findall(r"\w+", query.lower()):
+        if len(w) > 2 and w not in STOP and w not in seen:
+            seen.append(w)
+    return seen
+
+
 def keyword(query: str, limit: int = 10) -> list[dict]:
-    """Returns notes containing every word of the query, ranked by how often they appear."""
-    words = [w for w in re.findall(r"\w+", query.lower()) if len(w) > 2]
+    """Returns notes containing most of the query's meaningful words, best matches first.
+
+    A note needs at least half the words (all of them for one or two); notes with more
+    distinct words rank first, then by how often they appear, with a bonus for the title.
+    """
+    words = terms(query)
     if not words:
         return []
+    need = len(words) if len(words) <= 2 else (len(words) + 1) // 2
     hits = []
     for p in vault.notes():
         try:
@@ -43,11 +69,13 @@ def keyword(query: str, limit: int = 10) -> list[dict]:
         except OSError:
             continue
         low = text.lower()
-        if all(w in low for w in words):
-            score = sum(low.count(w) for w in words) + (5 if all(w in p.stem.lower() for w in words) else 0)
-            i = low.find(words[0])
-            hits.append((score, p, text[max(0, i - 80):i + 160].replace("\n", " ")))
-    hits.sort(key=lambda h: -h[0])
+        found = [w for w in words if w in low or w in p.stem.lower()]
+        if len(found) < need:
+            continue
+        score = (len(found), sum(low.count(w) for w in found) + 5 * sum(w in p.stem.lower() for w in found))
+        i = max(0, low.find(found[0]))
+        hits.append((score, p, text[max(0, i - 80):i + 160].replace("\n", " ")))
+    hits.sort(key=lambda h: h[0], reverse=True)
     return [{"note": h[1].stem, "path": vault.rel(h[1]), "snippet": h[2]} for h in hits[:limit]]
 
 
@@ -136,17 +164,24 @@ def semantic(query: str, limit: int = 8) -> list[dict]:
 
 
 def search(query: str, limit: int = 8) -> list[dict]:
-    """Returns semantic matches when the index is available, merged with keyword matches."""
-    results = []
+    """Returns keyword and semantic matches merged by rank, so a note either finds ranks well.
+
+    Keyword search needs no index, so new notes and a missing or stale index still find
+    their matches; semantic matches join in when the embedding model is reachable.
+    """
+    lists = [keyword(query, limit)]
     try:
-        results = semantic(query, limit)
+        lists.append(semantic(query, limit))
     except llm.Unavailable:
         pass
-    seen = {r["path"] for r in results}
-    for r in keyword(query, limit):
-        if r["path"] not in seen:
-            results.append(r)
-    return results[:limit]
+    # Reciprocal rank fusion: a note high in either list, or present in both, comes first.
+    score: dict[str, float] = {}
+    best: dict[str, dict] = {}
+    for results in lists:
+        for rank, r in enumerate(results):
+            score[r["path"]] = score.get(r["path"], 0) + 1 / (60 + rank)
+            best[r["path"]] = {**r, **best.get(r["path"], {})}
+    return [best[p] for p in sorted(score, key=lambda p: -score[p])][:limit]
 
 
 def answerer() -> str:
@@ -189,8 +224,9 @@ def recall(question: str, limit: int = 6, *, no_llm: bool = False, who: str | No
     if no_llm:
         listing = "\n\n".join(f"[[{h['note']}]] ({h['path']})\n{h['snippet']}" for h in hits)
         return {"answer": f"Notes matching: {question}\n\n{listing}", "notes": notes, "passages": hits}
-    context = "\n\n".join(f"[[{h['note']}]] ({h['path']}):\n{_full(h['path'])}" for h in hits)
-    prompt = f"Question: {question}\n\nNotes:\n{context[:14000]}"
+    words = terms(question)
+    context = "\n\n".join(f"[[{h['note']}]] ({h['path']}):\n{_passage(h['path'], words)}" for h in hits)
+    prompt = f"Question: {question}\n\nNotes:\n{context[:CONTEXT]}"
     if (who or answerer()) == "claude":
         answer = ask_claude(ANSWER, prompt)
     else:
@@ -201,8 +237,13 @@ def recall(question: str, limit: int = 6, *, no_llm: bool = False, who: str | No
     return {"answer": answer, "notes": notes, "passages": hits}
 
 
-def _full(rel_path: str, limit: int = 2500) -> str:
+def _passage(rel_path: str, words: list[str], size: int = 900) -> str:
+    """Returns about `size` characters of a note's body around the first of `words` it contains."""
     try:
-        return vault.split(vault.inside(Path(rel_path)).read_text(errors="ignore"))[1][:limit]
+        body = vault.split(vault.inside(Path(rel_path)).read_text(errors="ignore"))[1].strip()
     except (OSError, ValueError):
         return ""
+    low = body.lower()
+    at = min((i for i in (low.find(w) for w in words) if i >= 0), default=0)
+    start = max(0, min(at - size // 3, len(body) - size))
+    return body[start:start + size].strip()
