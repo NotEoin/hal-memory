@@ -1,9 +1,11 @@
 [Unit]
 Description=Hal memory: sort, link and index the vault while the computer is idle
+PartOf=hal.target
 After=graphical-session.target
+X-HalGPU=yes
 
 [Service]
-WorkingDirectory=%h/src/hal-ecosystem/extensions/hal-memory
+WorkingDirectory=@ROOT@
 ExecStart=/usr/bin/python3 -m halmem.idle
 Environment=PYTHONUNBUFFERED=1
 Nice=10
@@ -11,4 +13,4 @@ Restart=on-failure
 RestartSec=30
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=hal.target
