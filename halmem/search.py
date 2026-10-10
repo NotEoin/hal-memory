@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import array
 import math
+import os
 import re
 import sqlite3
+import subprocess
 from pathlib import Path
 
 from . import llm, vault
-from .config import data_dir
+from .config import data_dir, settings
 
 CHUNK = 1200        # characters per chunk
 MAX_CHUNKS = 12     # per note, so one huge note cannot dominate the index
@@ -55,8 +57,18 @@ def _chunks(text: str) -> list[str]:
     return [body[i:i + CHUNK] for i in range(0, min(len(body), CHUNK * MAX_CHUNKS), CHUNK)] or [""]
 
 
-def update_index(limit: int | None = None) -> dict:
-    """Embeds notes added or changed since the last update; returns counts."""
+def clear_index() -> None:
+    """Forgets every embedding, so the next update rebuilds the index."""
+    con = _db()
+    con.execute("DELETE FROM chunks")
+    con.commit()
+
+
+def update_index(limit: int | None = None, progress=None) -> dict:
+    """Embeds notes added or changed since the last update; returns counts.
+
+    `progress(done, total)` is called every 50 notes when given.
+    """
     con = _db()
     known = dict(con.execute("SELECT path, MAX(mtime) FROM chunks GROUP BY path"))
     present = set()
@@ -86,6 +98,8 @@ def update_index(limit: int | None = None) -> dict:
         done += 1
         if done % 50 == 0:
             con.commit()
+            if progress:
+                progress(done, len(todo[:limit]))
     con.commit()
     return {"embedded": done, "waiting": max(0, len(todo) - done), "removed": len(gone)}
 
@@ -135,14 +149,56 @@ def search(query: str, limit: int = 8) -> list[dict]:
     return results[:limit]
 
 
-def recall(question: str) -> dict:
-    """Answers a question from the vault, citing the notes used."""
-    hits = search(question, 6)
+def answerer() -> str:
+    """Returns who writes recall answers: "local" (the chat model) or "claude" (the claude CLI)."""
+    who = os.environ.get("HAL_ANSWERER") or settings()["answerer"]
+    return "claude" if who == "claude" else "local"
+
+
+def ask_claude(system: str, prompt: str, timeout: float = 600) -> str:
+    """Returns Claude Code's answer through `claude -p`, using its own login.
+
+    The retrieved passages leave the machine this way; HAL_CLAUDE_COMMAND names another binary.
+    """
+    cmd = os.environ.get("HAL_CLAUDE_COMMAND", "claude")
+    try:
+        r = subprocess.run([cmd, "-p", "--append-system-prompt", system, prompt],
+                           capture_output=True, text=True, timeout=timeout)
+    except FileNotFoundError:
+        raise llm.Unavailable(f"{cmd} is not on the PATH; set [memory].answerer to local") from None
+    except subprocess.TimeoutExpired:
+        raise llm.Unavailable(f"{cmd} timed out after {timeout:.0f}s") from None
+    if r.returncode != 0:
+        # Claude Code reports problems such as "Not logged in" on stdout.
+        detail = f"{r.stderr.strip()} {r.stdout.strip()}".strip()[:300] or "no output"
+        raise llm.Unavailable(f"{cmd} failed (exit {r.returncode}): {detail}")
+    return r.stdout.strip()
+
+
+def recall(question: str, limit: int = 6, *, no_llm: bool = False, who: str | None = None,
+           model: str | None = None) -> dict:
+    """Answers a question from the vault, citing the notes used.
+
+    With no_llm the matching notes and passages are returned without an answer.
+    `who` is "local" or "claude"; [memory].answerer (or HAL_ANSWERER) by default.
+    """
+    hits = search(question, limit)
+    notes = [h["note"] for h in hits]
     if not hits:
-        return {"answer": "Nothing in the vault mentions that.", "notes": []}
+        return {"answer": "Nothing in the vault mentions that.", "notes": [], "passages": []}
+    if no_llm:
+        listing = "\n\n".join(f"[[{h['note']}]] ({h['path']})\n{h['snippet']}" for h in hits)
+        return {"answer": f"Notes matching: {question}\n\n{listing}", "notes": notes, "passages": hits}
     context = "\n\n".join(f"[[{h['note']}]] ({h['path']}):\n{_full(h['path'])}" for h in hits)
-    answer = llm.chat(ANSWER, f"Question: {question}\n\nNotes:\n{context[:14000]}")
-    return {"answer": answer.strip(), "notes": [h["note"] for h in hits]}
+    prompt = f"Question: {question}\n\nNotes:\n{context[:14000]}"
+    if (who or answerer()) == "claude":
+        answer = ask_claude(ANSWER, prompt)
+    else:
+        answer = llm.chat(ANSWER, prompt, model=model)
+    answer = answer.strip()
+    if "[[" not in answer:
+        answer += "\n\nSources: " + ", ".join(f"[[{n}]]" for n in notes)
+    return {"answer": answer, "notes": notes, "passages": hits}
 
 
 def _full(rel_path: str, limit: int = 2500) -> str:

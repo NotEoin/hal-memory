@@ -53,6 +53,9 @@ timeout = 300
 [tools.params.question]
 description = "the question"
 required = true
+[tools.params.no_llm]
+type = "boolean"
+description = "return the matching notes and passages only, without a written answer"
 
 [[tools]]
 name = "memory_read"
@@ -130,3 +133,18 @@ description = "Update the semantic search index for notes that changed."
 timeout = 1800
 [tools.params.limit]
 type = "integer"
+
+[[tools]]
+name = "memory_brief"
+function = "brief"
+description = "Write the morning brief into today's daily note: open tasks and deadlines, yesterday's work, active projects and the last session, and a concept of the day. Returns the brief."
+keywords = "morning brief day plan agenda today summary"
+timeout = 600
+[tools.params.date]
+description = "YYYY-MM-DD; today if empty"
+[tools.params.no_llm]
+type = "boolean"
+description = "list the gathered facts without having the model write them up"
+[tools.params.print_only]
+type = "boolean"
+description = "return the brief without writing it into the daily note"

@@ -25,8 +25,8 @@ def search_notes(query: str, limit: int = 8) -> list[dict]:
     return search.search(query, int(limit))
 
 
-def recall(question: str) -> dict:
-    return search.recall(question)
+def recall(question: str, no_llm: bool = False) -> dict:
+    return search.recall(question, no_llm=no_llm)
 
 
 def read(note: str) -> dict:
@@ -95,3 +95,9 @@ def status() -> dict:
 
 def update_index(limit: int = 400) -> dict:
     return search.update_index(int(limit))
+
+
+def brief(date: str = "", no_llm: bool = False, print_only: bool = False) -> dict:
+    """Writes the morning brief into the day's daily note and returns it."""
+    from . import brief as briefing
+    return briefing.brief(date, no_llm=no_llm, print_only=print_only)
