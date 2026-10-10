@@ -2,6 +2,9 @@
 name = "memory"
 summary = "Lasting memory in one Obsidian vault: capture, search, recall and tidy"
 python = "halmem.tools"
+# Run by an installer after cloning: links the slash commands and the hal-memory command,
+# pulls the embedding model and registers the vault's MCP servers. Safe to re-run.
+install = ["{root}/bin/hal-memory", "setup"]
 
 [[tools]]
 name = "memory_remember"
