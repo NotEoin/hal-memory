@@ -31,6 +31,7 @@ DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 HEADING = re.compile(r"^#{1,6}\s+\S")
 H1 = re.compile(r"^#\s+\S")
 LINK = re.compile(r"\[\[([^\]|#]+)")
+BLOCK = re.compile(re.escape(START) + r".*?" + re.escape(END) + r"\n?", re.S)
 
 
 def _read(p: Path) -> str:
@@ -38,6 +39,11 @@ def _read(p: Path) -> str:
         return p.read_text(encoding="utf-8", errors="ignore")
     except OSError:
         return ""
+
+
+def _own(p: Path) -> str:
+    """Returns a note without any brief block, so a brief never counts its own tasks."""
+    return BLOCK.sub("", _read(p))
 
 
 def _md(folder: Path) -> list[Path]:
@@ -69,7 +75,7 @@ def tasks(root: Path, day: str) -> tuple[list[dict], list[dict]]:
         for p in _md(root / folder):
             if _study(root, p):
                 continue
-            for line in _read(p).splitlines():
+            for line in _own(p).splitlines():
                 m = TASK.match(line)
                 if not m or m.group(1).lower() == "x" or not m.group(2).strip():
                     continue
@@ -83,7 +89,7 @@ def yesterday(root: Path, day: date) -> dict | None:
     p = root / settings()["daily_folder"] / f"{day - timedelta(days=1)}.md"
     if not p.exists():
         return None
-    text = _read(p)
+    text = _own(p)
     done = [l for l in section(text, "done today").splitlines()
             if l.strip().lstrip("-*").strip() and not l.strip().startswith("<!--")]
     completed, carry = [], []
@@ -200,7 +206,7 @@ def daily_note(root: Path, day: date) -> Path:
 
 def insert(text: str, brief: str) -> str:
     """Returns the note with the brief block replaced, or added under its H1."""
-    text = re.sub(re.escape(START) + r".*?" + re.escape(END) + r"\n?", "", text, flags=re.S)
+    text = BLOCK.sub("", text)
     block = [START, HEADER, "<!-- written by `hal brief`; running it again replaces this block -->",
              *brief.strip().splitlines(), END]
     lines = text.splitlines()

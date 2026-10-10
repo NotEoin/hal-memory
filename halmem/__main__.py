@@ -1,15 +1,18 @@
-"""hal-memory command line, driven by hal-module.toml.
+"""hal-memory command line: the subcommands in halmem.cli, and every tool in hal-module.toml.
 
-    python -m halmem                      list the tools
-    python -m halmem TOOL [key=value ...] run one (the module prefix is optional)
-    python -m halmem --stdin FUNCTION      run a function with JSON arguments on stdin
+    hal-memory                            list the subcommands and tools
+    hal-memory ask|index|brief|...        a subcommand (see below)
+    hal-memory TOOL [key=value ...]       run a tool (the module prefix is optional)
+    hal-memory --stdin FUNCTION           run a function with JSON arguments on stdin
+
+bin/hal-memory runs this from anywhere; `python3 -m halmem` works inside the repo.
 """
 import json
 import sys
 import tomllib
 from pathlib import Path
 
-from . import tools
+from . import cli, tools
 
 MANIFEST = Path(__file__).resolve().parents[1] / "hal-module.toml"
 
@@ -38,12 +41,16 @@ def main(argv=None) -> int:
     if argv[:1] == ["--stdin"]:
         _show(getattr(tools, argv[1])(**json.loads(sys.stdin.read() or "{}")))
         return 0
+    if argv and argv[0] in cli.COMMANDS:
+        return cli.run(argv)
     prefix = spec["module"]["name"] + "_"
     by_name = {}
     for t in spec.get("tools", []):
         by_name[t["name"]] = by_name[t["name"].removeprefix(prefix)] = t
-    if not argv or argv[0] in ("-h", "--help", "--list"):
+    if not argv or argv[0] in ("-h", "--help", "--list", "help"):
         print(__doc__)
+        print(cli.__doc__.split("\n\n", 1)[1].rstrip())
+        print("\ntools (index and brief name the subcommands above; memory_index and memory_brief the tools):")
         for t in spec.get("tools", []):
             print(f"  {t['name'].removeprefix(prefix):22} {t['description'].splitlines()[0][:80]}")
         return 0

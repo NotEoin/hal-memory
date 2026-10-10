@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Runs hal-memory from anywhere: hal-memory ask "...", index, brief, summarize, import, setup,
+# or any tool as hal-memory <tool> key=value. hal-memory --help lists them all.
+set -euo pipefail
+HERE="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}" PYTHONUNBUFFERED=1 exec "${HAL_PYTHON:-python3}" -m halmem "$@"
