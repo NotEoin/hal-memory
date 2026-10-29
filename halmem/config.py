@@ -48,6 +48,7 @@ SHARED = {
     "fast_model": "qwen3.5:4b",
     "embed_model": "embeddinggemma",
     "vision_model": "qwen3-vl:8b",
+    "user_name": "",  # how Hal refers to you in conversation logs and the profile; empty means "you"
 }
 
 
@@ -71,6 +72,11 @@ def settings() -> dict:
 def shared() -> dict:
     """Returns the ecosystem-wide settings."""
     return {**SHARED, **_file().get("hal", {})}
+
+
+def user_name() -> str:
+    """Returns `[hal].user_name`, or an empty string when it is not set."""
+    return str(shared()["user_name"]).strip()
 
 
 def vault() -> Path:

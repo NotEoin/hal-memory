@@ -174,6 +174,7 @@ models in `[hal]`:
 vault = "~/Documents/vaults/Hal"
 chat_model = "qwen3.5:9b"
 embed_model = "embeddinggemma"
+user_name = ""          # your name in conversation logs and the profile; empty means "You"
 
 [memory]
 idle_minutes = 10        # idle time before a pass

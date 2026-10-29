@@ -57,6 +57,36 @@ class MemoryTest(unittest.TestCase):
         self.assertEqual(p.parent.name, "+Inbox")
         self.assertEqual(self.vault.fields(p.read_text())["hal"], "inbox")
 
+    def _write_config(self, extra: str) -> None:
+        """Appends to the `[hal]` table, the last table in the test config."""
+        cfg = Path(os.environ["HAL_CONFIG"])
+        cfg.write_text(cfg.read_text() + extra)
+
+    def test_conversation_log_uses_user_name(self):
+        from halmem import capture
+
+        self._write_config('user_name = "Ada"\n')
+        p = capture.log_conversation("hello", "hi there")
+        self.assertIn("**Ada:** hello", p.read_text())
+        self.assertNotIn("**You:**", p.read_text())
+
+    def test_conversation_log_without_user_name_says_you(self):
+        from halmem import capture
+
+        p = capture.log_conversation("hello", "hi there")
+        self.assertIn("**You:** hello", p.read_text())
+
+    def test_profile_note_without_user_name_says_you(self):
+        from halmem import capture
+
+        self.assertIn("What Hal knows about you.", capture.profile_path().read_text())
+
+    def test_profile_note_with_user_name_names_them(self):
+        from halmem import capture
+
+        self._write_config('user_name = "Ada"\n')
+        self.assertIn("What Hal knows about Ada.", capture.profile_path().read_text())
+
     def test_paths_cannot_escape_the_vault(self):
         with self.assertRaises(ValueError):
             self.vault.inside(Path("../outside.md"))

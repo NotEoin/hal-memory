@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 from . import vault
-from .config import settings
+from .config import settings, user_name
 
 
 def remember(
@@ -62,9 +62,10 @@ def log_conversation(user: str, assistant: str, channel: str = "voice") -> Path:
         )
         _daily_link(day, path.stem)
     t = datetime.now().strftime("%H:%M")
+    label = user_name() or "You"
     with path.open("a") as f:
         f.write(
-            f"\n## {t} ({channel})\n\n**You:** {user.strip()}\n\n**Hal:** {assistant.strip()}\n"
+            f"\n## {t} ({channel})\n\n**{label}:** {user.strip()}\n\n**Hal:** {assistant.strip()}\n"
         )
     return path
 
@@ -80,9 +81,10 @@ def profile_path() -> Path:
     path = vault.inside(Path(settings()["profile_note"]))
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
+        who = user_name() or "you"
         path.write_text(
             vault.set_fields(
-                "# Profile\n\nWhat Hal knows about you. Hal reads this first and adds to it when told a lasting fact.\n\n## Facts\n\n",
+                f"# Profile\n\nWhat Hal knows about {who}. Hal reads this first and adds to it when told a lasting fact.\n\n## Facts\n\n",
                 {"type": "profile", "tags": ["system", "profile"]},
             )
         )
