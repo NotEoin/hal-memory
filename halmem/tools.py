@@ -30,7 +30,13 @@ def search_notes(query: str, limit: int = 8) -> list[dict]:
 
 
 def recall(question: str, no_llm: bool = False) -> dict:
-    return search.recall(question, no_llm=no_llm)
+    """Answers a question from the vault with the local model.
+
+    Never uses the `claude` answerer, whatever `[memory].answerer` or `HAL_ANSWERER` say: a tool
+    call is made by a model, and vault passages must not leave the machine because of one.
+    Only the `hal-memory ask` command, run by a person, may use it.
+    """
+    return search.recall(question, no_llm=no_llm, who="local")
 
 
 def read(note: str) -> dict:

@@ -142,6 +142,24 @@ class RecallTest(Base):
             os.environ.pop("HAL_CLAUDE_COMMAND")
         self.assertIn("args=-p", out["answer"])
 
+    def test_recall_tool_never_uses_cloud_answerer(self):
+        from halmem import tools
+
+        marker = self.base / "claude-was-run"
+        fake = self.base / "claude"
+        fake.write_text(f'#!/bin/sh\ntouch "{marker}"\necho "cloud answer"\n')
+        fake.chmod(0o755)
+        self.llm.chat = lambda system, user, **kw: "You chose Redis."
+        os.environ["HAL_CLAUDE_COMMAND"] = str(fake)
+        os.environ["HAL_ANSWERER"] = "claude"
+        try:
+            out = tools.recall(QUESTION)
+        finally:
+            os.environ.pop("HAL_CLAUDE_COMMAND")
+            os.environ.pop("HAL_ANSWERER")
+        self.assertFalse(marker.exists())
+        self.assertIn("You chose Redis.", out["answer"])
+
     def test_ask_command_no_llm(self):
         r = self.run_cli("ask", "--no-llm", QUESTION)
         self.assertEqual(r.returncode, 0, r.stderr)

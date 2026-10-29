@@ -98,7 +98,9 @@ and works before the semantic index has been built.
 
 The answer is written by the local chat model, or by Claude Code (`claude -p`, with its own login)
 when `answerer = "claude"` is set in `[memory]` or `HAL_ANSWERER=claude`. Retrieval is local
-either way; with Claude the retrieved passages leave the machine.
+either way; with Claude the retrieved passages leave the machine. That is why only the
+`hal-memory ask` command, run by you, can use Claude: the `memory_recall` tool (and so any model
+or MCP client) always answers with the local model, whatever `answerer` says.
 
 ## Importing old notes and slides
 
@@ -180,7 +182,7 @@ user_name = ""          # your name in conversation logs and the profile; empty 
 idle_minutes = 10        # idle time before a pass
 batch = 25               # notes per pass
 review_below = 0.6       # confidence under which a filing needs review
-answerer = "local"       # or "claude": who writes recall answers
+answerer = "local"       # or "claude": who writes `hal-memory ask` answers (never tool calls)
 university = "University"  # root note of the study hierarchy
 [memory.folders]
 idea = "Areas/Personal/Ideas"
