@@ -162,7 +162,7 @@ class CommandTest(Base):
         names = ["extract-pdfs.sh", "extract-docx.sh", "extract-pptx.sh", "extract-html.sh",
                  "prepare-import.sh", "import-vault.sh", "register-repos.sh"]
         for name in names:
-            p = ROOT / "ingest" / name
+            p = ROOT / "halmem" / "ingest" / name
             self.assertTrue(p.exists(), name)
             self.assertTrue(p.stat().st_mode & stat.S_IXUSR, name)
             self.assertEqual(subprocess.run(["bash", "-n", str(p)]).returncode, 0, name)

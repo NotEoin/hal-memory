@@ -23,8 +23,8 @@ from pathlib import Path
 
 from .config import settings, vault
 
-ROOT = Path(__file__).resolve().parents[1]
-INGEST = ROOT / "ingest"
+PACKAGE = Path(__file__).resolve().parent
+INGEST = PACKAGE / "ingest"
 EXTRACTORS = {"pdf": "extract-pdfs.sh", "docx": "extract-docx.sh", "pptx": "extract-pptx.sh",
               "html": "extract-html.sh"}
 
@@ -37,7 +37,7 @@ def pipeline_vault() -> Path:
 def _script(name: str, args: list[str]) -> int:
     env = {**os.environ, "HAL_VAULT": str(pipeline_vault()),
            "HAL_UNIVERSITY": os.environ.get("HAL_UNIVERSITY") or settings()["university"],
-           "PYTHONPATH": os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")]))}
+           "PYTHONPATH": os.pathsep.join(filter(None, [str(PACKAGE.parent), os.environ.get("PYTHONPATH")]))}
     try:
         return subprocess.call(["bash", str(INGEST / name), *args], env=env)
     except KeyboardInterrupt:

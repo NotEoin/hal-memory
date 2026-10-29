@@ -202,7 +202,7 @@ These used to live in the `hal` launcher's repo and now live here:
 
 | Old | Now |
 | --- | --- |
-| `extract-*.sh`, `prepare-import.sh`, `import-vault.sh`, `register-repos.sh` | `ingest/`, run as `hal-memory import ...` and `hal-memory register-repos` |
+| `extract-*.sh`, `prepare-import.sh`, `import-vault.sh`, `register-repos.sh` | `halmem/ingest/`, run as `hal-memory import ...` and `hal-memory register-repos` |
 | `summarize-all.py`, `hal_chat.py` | `halmem/summarize.py`, `halmem/llm.py` (`hal summarize`) |
 | `morning-brief.py` | `halmem/brief.py` (`hal brief`, `memory_brief`) |
 | `vault-index.py`, `hal_rag.py`, `ask.py` | hal-memory's search and recall (`hal index`, `hal ask`) |

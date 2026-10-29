@@ -1,0 +1,56 @@
+[project]
+name = "hal-memory"
+version = "0.1.0"
+description = "Long-term memory in an Obsidian vault for local models: capture, search, recall"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = ["hal-kit>=0.1,<0.2", "hal-hub>=0.1,<0.2"]
+
+[project.optional-dependencies]
+documents = ["pymupdf>=1.24,<2", "python-docx>=1.1,<2", "python-pptx>=1.0,<2"]
+fast = ["numpy>=1.26"]
+
+[project.scripts]
+hal-memory = "halmem.__main__:main"
+
+[project.entry-points."hal.packs"]
+memory = "halmem"
+
+[build-system]
+requires = ["hatchling>=1.25,<2"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["halmem"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"systemd" = "halmem/systemd"
+
+[tool.uv.sources]
+# Development: sibling Hal worktree. A release replaces these with git tag sources.
+hal-kit = { path = "../Hal.next/packages/hal-kit", editable = true }
+hal-hub = { path = "../Hal.next/packages/hal-hub", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.3,<10", "ruff>=0.15,<1", "hatchling>=1.25,<2"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "BLE", "S", "T20", "RUF", "PLC2401"]
+# S603 and S607 flag every subprocess call; argv-only calls with a timeout are the design.
+ignore = ["S603", "S607"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not network'"
+markers = [
+  "network: needs internet access",
+  "slow: builds a wheel or runs a long process",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]  # pytest reports assert failures with full introspection
