@@ -1,4 +1,5 @@
 """Tests for frontmatter editing, the wikilink pass and capture, on a throwaway vault."""
+
 import os
 import sys
 import tempfile
@@ -13,7 +14,9 @@ class MemoryTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         base = Path(self.tmp.name)
         (base / "vault" / "People").mkdir(parents=True)
-        (base / "vault" / "People" / "Ada Lovelace.md").write_text("---\naliases: [Lovelace, Ada]\n---\n# Ada\n")
+        (base / "vault" / "People" / "Ada Lovelace.md").write_text(
+            "---\naliases: [Lovelace, Ada]\n---\n# Ada\n"
+        )
         (base / "vault" / "Topics").mkdir()
         (base / "vault" / "Topics" / "Analytical Engine.md").write_text("# Engine\n")
         cfg = base / "config.toml"
@@ -21,6 +24,7 @@ class MemoryTest(unittest.TestCase):
         os.environ["HAL_CONFIG"] = str(cfg)
         os.environ["HAL_DATA"] = str(base / "data")
         from halmem import vault
+
         self.vault = vault
 
     def tearDown(self):
@@ -35,6 +39,7 @@ class MemoryTest(unittest.TestCase):
 
     def test_linker_links_first_mention_and_skips_code(self):
         from halmem.linker import Linker
+
         body = "Lovelace wrote about the analytical engine. Lovelace again. Ada too.\n```\nLovelace in code\n```\n"
         out, n = Linker().link_text(body, "note", 10)
         self.assertEqual(n, 2)
@@ -47,6 +52,7 @@ class MemoryTest(unittest.TestCase):
 
     def test_remember_writes_to_inbox(self):
         from halmem import capture
+
         p = capture.remember("Buy milk", "milk")
         self.assertEqual(p.parent.name, "+Inbox")
         self.assertEqual(self.vault.fields(p.read_text())["hal"], "inbox")
@@ -57,6 +63,7 @@ class MemoryTest(unittest.TestCase):
 
     def test_empty_notes_count_as_indexed(self):
         from halmem import search
+
         search.llm.embed = lambda texts, timeout=120: [[1.0, 0.0] for _ in texts]
         (Path(self.tmp.name) / "vault" / "Empty.md").write_text("---\ntags: []\n---\n")
         self.assertEqual(search.update_index()["waiting"], 0)
@@ -64,6 +71,7 @@ class MemoryTest(unittest.TestCase):
 
     def test_facts_are_not_duplicated(self):
         from halmem import capture
+
         self.assertEqual(capture.add_fact("Prefers tea"), "added")
         self.assertEqual(capture.add_fact("prefers tea"), "already known")
 

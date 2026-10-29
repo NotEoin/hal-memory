@@ -4,6 +4,7 @@ The semantic index keeps one embedding per note chunk in SQLite and updates
 only notes whose modification time changed. numpy speeds up ranking when it
 is installed; pure Python is used otherwise.
 """
+
 from __future__ import annotations
 
 import array
@@ -17,10 +18,10 @@ from pathlib import Path
 from . import llm, vault
 from .config import data_dir, settings
 
-CHUNK = 1200        # characters per chunk
-MAX_CHUNKS = 12     # per note, so one huge note cannot dominate the index
+CHUNK = 1200  # characters per chunk
+MAX_CHUNKS = 12  # per note, so one huge note cannot dominate the index
 
-CONTEXT = 6000      # characters of notes given to the answering model, so a voice turn stays quick
+CONTEXT = 6000  # characters of notes given to the answering model, so a voice turn stays quick
 
 ANSWER = """Answer the question using only the vault notes given. Cite every note you use as
 [[Note title]]. If the notes do not answer it, say so plainly. Be brief."""
@@ -35,12 +36,14 @@ def _db() -> sqlite3.Connection:
 
 # Words that carry no meaning in a question, so "What did I decide about caching?" searches for
 # "decide" and "caching".
-STOP = set("""a an the and or but if then so of to in on at by for from with about into over under
+STOP = set(
+    """a an the and or but if then so of to in on at by for from with about into over under
 is are was were be been being am do does did done have has had having i me my mine we our us you your
 he she it its they them their this that these those what which who whom whose when where why how
 can could should would will shall may might must not no yes any all some each more most other such
 just than too very also only own same there here out up down off again once tell show find give know
-remember note notes vault anything something thing things""".split())
+remember note notes vault anything something thing things""".split()
+)
 
 
 def terms(query: str) -> list[str]:
@@ -72,9 +75,12 @@ def keyword(query: str, limit: int = 10) -> list[dict]:
         found = [w for w in words if w in low or w in p.stem.lower()]
         if len(found) < need:
             continue
-        score = (len(found), sum(low.count(w) for w in found) + 5 * sum(w in p.stem.lower() for w in found))
+        score = (
+            len(found),
+            sum(low.count(w) for w in found) + 5 * sum(w in p.stem.lower() for w in found),
+        )
         i = max(0, low.find(found[0]))
-        hits.append((score, p, text[max(0, i - 80):i + 160].replace("\n", " ")))
+        hits.append((score, p, text[max(0, i - 80) : i + 160].replace("\n", " ")))
     hits.sort(key=lambda h: h[0], reverse=True)
     return [{"note": h[1].stem, "path": vault.rel(h[1]), "snippet": h[2]} for h in hits[:limit]]
 
@@ -82,7 +88,9 @@ def keyword(query: str, limit: int = 10) -> list[dict]:
 def _chunks(text: str) -> list[str]:
     _, body = vault.split(text)
     body = re.sub(r"\n{3,}", "\n\n", body).strip()
-    return [body[i:i + CHUNK] for i in range(0, min(len(body), CHUNK * MAX_CHUNKS), CHUNK)] or [""]
+    return [body[i : i + CHUNK] for i in range(0, min(len(body), CHUNK * MAX_CHUNKS), CHUNK)] or [
+        ""
+    ]
 
 
 def clear_index() -> None:
@@ -121,8 +129,13 @@ def update_index(limit: int | None = None, progress=None) -> dict:
             continue
         vecs = llm.embed([f"{p.stem}\n{c}" for c in chunks])
         con.execute("DELETE FROM chunks WHERE path = ?", (r,))
-        con.executemany("INSERT INTO chunks VALUES (?, ?, ?, ?, ?)",
-                        [(r, m, i, c, array.array("f", v).tobytes()) for i, (c, v) in enumerate(zip(chunks, vecs))])
+        con.executemany(
+            "INSERT INTO chunks VALUES (?, ?, ?, ?, ?)",
+            [
+                (r, m, i, c, array.array("f", v).tobytes())
+                for i, (c, v) in enumerate(zip(chunks, vecs, strict=False))
+            ],
+        )
         done += 1
         if done % 50 == 0:
             con.commit()
@@ -140,6 +153,7 @@ def semantic(query: str, limit: int = 8) -> list[dict]:
         return []
     try:
         import numpy as np
+
         mat = np.frombuffer(b"".join(r[3] for r in rows), dtype=np.float32).reshape(len(rows), -1)
         qv = np.asarray(q, dtype=np.float32)
         scores = (mat @ qv) / (np.linalg.norm(mat, axis=1) * np.linalg.norm(qv) + 1e-9)
@@ -150,14 +164,22 @@ def semantic(query: str, limit: int = 8) -> list[dict]:
         ranked = []
         for r in rows:
             v = array.array("f", r[3])
-            ranked.append((sum(a * b for a, b in zip(v, q)) / (math.sqrt(sum(a * a for a in v)) * qn + 1e-9), r))
+            ranked.append(
+                (
+                    sum(a * b for a, b in zip(v, q, strict=False))
+                    / (math.sqrt(sum(a * a for a in v)) * qn + 1e-9),
+                    r,
+                )
+            )
         ranked.sort(key=lambda x: -x[0])
     out, seen = [], set()
     for score, (path, _n, text, _v) in ranked:
         if path in seen:
             continue
         seen.add(path)
-        out.append({"note": Path(path).stem, "path": path, "score": round(score, 3), "snippet": text[:300]})
+        out.append(
+            {"note": Path(path).stem, "path": path, "score": round(score, 3), "snippet": text[:300]}
+        )
         if len(out) >= limit:
             break
     return out
@@ -197,8 +219,12 @@ def ask_claude(system: str, prompt: str, timeout: float = 600) -> str:
     """
     cmd = os.environ.get("HAL_CLAUDE_COMMAND", "claude")
     try:
-        r = subprocess.run([cmd, "-p", "--append-system-prompt", system, prompt],
-                           capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(
+            [cmd, "-p", "--append-system-prompt", system, prompt],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
     except FileNotFoundError:
         raise llm.Unavailable(f"{cmd} is not on the PATH; set [memory].answerer to local") from None
     except subprocess.TimeoutExpired:
@@ -210,8 +236,14 @@ def ask_claude(system: str, prompt: str, timeout: float = 600) -> str:
     return r.stdout.strip()
 
 
-def recall(question: str, limit: int = 6, *, no_llm: bool = False, who: str | None = None,
-           model: str | None = None) -> dict:
+def recall(
+    question: str,
+    limit: int = 6,
+    *,
+    no_llm: bool = False,
+    who: str | None = None,
+    model: str | None = None,
+) -> dict:
     """Answers a question from the vault, citing the notes used.
 
     With no_llm the matching notes and passages are returned without an answer.
@@ -223,9 +255,15 @@ def recall(question: str, limit: int = 6, *, no_llm: bool = False, who: str | No
         return {"answer": "Nothing in the vault mentions that.", "notes": [], "passages": []}
     if no_llm:
         listing = "\n\n".join(f"[[{h['note']}]] ({h['path']})\n{h['snippet']}" for h in hits)
-        return {"answer": f"Notes matching: {question}\n\n{listing}", "notes": notes, "passages": hits}
+        return {
+            "answer": f"Notes matching: {question}\n\n{listing}",
+            "notes": notes,
+            "passages": hits,
+        }
     words = terms(question)
-    context = "\n\n".join(f"[[{h['note']}]] ({h['path']}):\n{_passage(h['path'], words)}" for h in hits)
+    context = "\n\n".join(
+        f"[[{h['note']}]] ({h['path']}):\n{_passage(h['path'], words)}" for h in hits
+    )
     prompt = f"Question: {question}\n\nNotes:\n{context[:CONTEXT]}"
     if (who or answerer()) == "claude":
         answer = ask_claude(ANSWER, prompt)
@@ -246,4 +284,4 @@ def _passage(rel_path: str, words: list[str], size: int = 900) -> str:
     low = body.lower()
     at = min((i for i in (low.find(w) for w in words) if i >= 0), default=0)
     start = max(0, min(at - size // 3, len(body) - size))
-    return body[start:start + size].strip()
+    return body[start : start + size].strip()

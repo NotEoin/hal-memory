@@ -9,6 +9,7 @@ moment the user is back.
     python -m halmem.idle            run the daemon
     python -m halmem.idle --once     one full pass now, ignoring idleness
 """
+
 from __future__ import annotations
 
 import json
@@ -26,15 +27,29 @@ def idle_seconds() -> float:
     """Returns how long the desktop has been idle, or 0 when it cannot tell."""
     try:
         out = subprocess.run(
-            ["gdbus", "call", "--session", "--dest", "org.gnome.Mutter.IdleMonitor",
-             "--object-path", "/org/gnome/Mutter/IdleMonitor/Core",
-             "--method", "org.gnome.Mutter.IdleMonitor.GetIdletime"],
-            capture_output=True, text=True, timeout=5).stdout
+            [
+                "gdbus",
+                "call",
+                "--session",
+                "--dest",
+                "org.gnome.Mutter.IdleMonitor",
+                "--object-path",
+                "/org/gnome/Mutter/IdleMonitor/Core",
+                "--method",
+                "org.gnome.Mutter.IdleMonitor.GetIdletime",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout
         return int(out.strip("()\n, ").split()[-1]) / 1000
     except (OSError, ValueError, IndexError, subprocess.SubprocessError):
         pass
     try:
-        return int(subprocess.run(["xprintidle"], capture_output=True, text=True, timeout=5).stdout) / 1000
+        return (
+            int(subprocess.run(["xprintidle"], capture_output=True, text=True, timeout=5).stdout)
+            / 1000
+        )
     except (OSError, ValueError, subprocess.SubprocessError):
         return 0.0
 
@@ -70,8 +85,11 @@ def run_pass(check_idle: bool = True) -> list[dict]:
         except Exception as e:  # noqa: BLE001 - the daemon logs and carries on with the next step
             out = {"error": f"{type(e).__name__}: {e}"}
         results.append({"step": name, "seconds": round(time.time() - started, 1), "result": out})
-    (data_dir() / "last-pass.json").write_text(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                                            "results": results}, indent=1, default=str))
+    (data_dir() / "last-pass.json").write_text(
+        json.dumps(
+            {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "results": results}, indent=1, default=str
+        )
+    )
     return results
 
 

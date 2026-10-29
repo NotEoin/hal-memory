@@ -3,6 +3,7 @@
 Safe to re-run; with check=True it only reports. Nothing here uses sudo: missing
 system packages are reported with the command that installs them.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,10 +16,22 @@ from .config import shared, vault
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS = ROOT / "claude-commands"
-APT = {"pdftotext": "poppler-utils", "pdftoppm": "poppler-utils", "tesseract": "tesseract-ocr", "pandoc": "pandoc"}
+APT = {
+    "pdftotext": "poppler-utils",
+    "pdftoppm": "poppler-utils",
+    "tesseract": "tesseract-ocr",
+    "pandoc": "pandoc",
+}
 PIP = {"fitz": "pymupdf", "docx": "python-docx", "pptx": "python-pptx"}
-OBSIDIAN = {"command": "uvx", "args": ["mcp-obsidian"],
-            "env": {"OBSIDIAN_API_KEY": "${OBSIDIAN_API_KEY}", "OBSIDIAN_HOST": "127.0.0.1", "OBSIDIAN_PORT": "27124"}}
+OBSIDIAN = {
+    "command": "uvx",
+    "args": ["mcp-obsidian"],
+    "env": {
+        "OBSIDIAN_API_KEY": "${OBSIDIAN_API_KEY}",
+        "OBSIDIAN_HOST": "127.0.0.1",
+        "OBSIDIAN_PORT": "27124",
+    },
+}
 
 
 def say(kind: str, text: str) -> None:
@@ -27,7 +40,9 @@ def say(kind: str, text: str) -> None:
 
 def key_file() -> Path:
     """Returns where the Obsidian Local REST API key is kept; HAL_OBSIDIAN_KEY_FILE overrides it."""
-    return Path(os.environ.get("HAL_OBSIDIAN_KEY_FILE", "~/.config/hal/obsidian_api_key")).expanduser()
+    return Path(
+        os.environ.get("HAL_OBSIDIAN_KEY_FILE", "~/.config/hal/obsidian_api_key")
+    ).expanduser()
 
 
 def save_key(key: str) -> Path:
@@ -67,7 +82,15 @@ def link_commands(dest: Path, check: bool) -> int:
             continue
         todo += 1
         if check:
-            say("todo", f"link {target}" + (" (replacing a different file)" if target.exists() and not _same(target, src) else ""))
+            say(
+                "todo",
+                f"link {target}"
+                + (
+                    " (replacing a different file)"
+                    if target.exists() and not _same(target, src)
+                    else ""
+                ),
+            )
             continue
         dest.mkdir(parents=True, exist_ok=True)
         if target.exists() or target.is_symlink():
@@ -89,10 +112,17 @@ def check_tools() -> int:
     if apt:
         say("todo", "install document tools: sudo apt-get install " + " ".join(apt))
     if pip:
-        say("note", "optional Python extractors (PPTX needs python-pptx): pip install --user " + " ".join(pip))
+        say(
+            "note",
+            "optional Python extractors (PPTX needs python-pptx): pip install --user "
+            + " ".join(pip),
+        )
     if not apt:
         say("ok", "pdftotext, tesseract and pandoc are installed")
-    for tool, why in (("uvx", "the obsidian MCP server"), ("claude", "answerer = \"claude\" and the slash commands")):
+    for tool, why in (
+        ("uvx", "the obsidian MCP server"),
+        ("claude", 'answerer = "claude" and the slash commands'),
+    ):
         if not shutil.which(tool):
             say("note", f"{tool} is not on the PATH (needed for {why})")
     return len(apt)
@@ -100,6 +130,7 @@ def check_tools() -> int:
 
 def _importable(module: str) -> bool:
     import importlib.util
+
     try:
         return importlib.util.find_spec(module) is not None
     except (ImportError, ValueError):
@@ -152,11 +183,17 @@ def merge_mcp(cfg: dict, hub: str | None) -> list[str]:
         servers["obsidian"] = json.loads(json.dumps(OBSIDIAN))
         changes.append("add obsidian")
     current = servers.get("hal-hub", {})
-    if hub and not (current.get("command") and shutil.which(current["command"]) and current.get("args") == ["mcp"]):
+    if hub and not (
+        current.get("command")
+        and shutil.which(current["command"])
+        and current.get("args") == ["mcp"]
+    ):
         servers["hal-hub"] = {**current, "command": hub, "args": ["mcp"]}
         changes.append(f"set hal-hub to {hub}")
     old = servers.get("hal")
-    if isinstance(old, dict) and any("hal-mcp.py" in str(a) for a in [old.get("command", ""), *old.get("args", [])]):
+    if isinstance(old, dict) and any(
+        "hal-mcp.py" in str(a) for a in [old.get("command", ""), *old.get("args", [])]
+    ):
         del servers["hal"]
         changes.append("remove hal (hal-mcp.py, replaced by hal-hub)")
     return changes
@@ -218,9 +255,16 @@ def link_bin(bin_dir: Path, check: bool) -> int:
     return 0
 
 
-def run(check: bool = False, commands_dir: str | None = None, bin_dir: str | None = None, pull: bool = True) -> int:
+def run(
+    check: bool = False,
+    commands_dir: str | None = None,
+    bin_dir: str | None = None,
+    pull: bool = True,
+) -> int:
     """Runs every setup step; returns the exit status (with check, 1 when anything is left to do)."""
-    commands = Path(commands_dir or os.environ.get("HAL_CLAUDE_COMMANDS", "~/.claude/commands")).expanduser()
+    commands = Path(
+        commands_dir or os.environ.get("HAL_CLAUDE_COMMANDS", "~/.claude/commands")
+    ).expanduser()
     bins = Path(bin_dir or os.environ.get("HAL_BIN_DIR", "~/.local/bin")).expanduser()
     root = vault()
     print(f"hal-memory setup{' --check' if check else ''}: vault {root}")
@@ -232,6 +276,9 @@ def run(check: bool = False, commands_dir: str | None = None, bin_dir: str | Non
         say("todo", "save the Obsidian Local REST API key: hal-memory obsidian-key KEY")
         todo += 1
     if (root / "System" / ".rag").is_dir():
-        say("note", f"{root / 'System' / '.rag'} is the old search index; hal-memory does not use it, so it can be deleted")
+        say(
+            "note",
+            f"{root / 'System' / '.rag'} is the old search index; hal-memory does not use it, so it can be deleted",
+        )
     print("all set" if not todo else f"{todo} thing(s) {'to do' if check else 'still need you'}")
     return 1 if check and todo else 0

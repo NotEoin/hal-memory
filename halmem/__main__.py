@@ -7,6 +7,7 @@
 
 bin/hal-memory runs this from anywhere; `python3 -m halmem` works inside the repo.
 """
+
 import json
 import sys
 import tomllib
@@ -50,7 +51,9 @@ def main(argv=None) -> int:
     if not argv or argv[0] in ("-h", "--help", "--list", "help"):
         print(__doc__)
         print(cli.__doc__.split("\n\n", 1)[1].rstrip())
-        print("\ntools (index and brief name the subcommands above; memory_index and memory_brief the tools):")
+        print(
+            "\ntools (index and brief name the subcommands above; memory_index and memory_brief the tools):"
+        )
         for t in spec.get("tools", []):
             print(f"  {t['name'].removeprefix(prefix):22} {t['description'].splitlines()[0][:80]}")
         return 0

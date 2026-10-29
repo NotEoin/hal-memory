@@ -5,6 +5,7 @@ last work session, and a concept of the day from the study topics, then has the
 chat model write them up. Without a model the gathered facts are written as they
 are. Re-running a day replaces that day's brief.
 """
+
 from __future__ import annotations
 
 import re
@@ -90,8 +91,11 @@ def yesterday(root: Path, day: date) -> dict | None:
     if not p.exists():
         return None
     text = _own(p)
-    done = [l for l in section(text, "done today").splitlines()
-            if l.strip().lstrip("-*").strip() and not l.strip().startswith("<!--")]
+    done = [
+        line
+        for line in section(text, "done today").splitlines()
+        if line.strip().lstrip("-*").strip() and not line.strip().startswith("<!--")
+    ]
     completed, carry = [], []
     for line in text.splitlines():
         m = TASK.match(line)
@@ -108,14 +112,24 @@ def projects(root: Path) -> tuple[list[dict], dict | None]:
             continue
         f = vault.fields(_read(p))
         if f.get("type") == "project" and str(f.get("status", "")).lower() == "active":
-            active.append({"name": p.stem, "date": f.get("date", "") if isinstance(f.get("date"), str) else ""})
-    logs = sorted((root / "Areas" / "Work" / "Session-Logs").glob("*.md"), key=lambda q: q.stat().st_mtime)
+            active.append(
+                {
+                    "name": p.stem,
+                    "date": f.get("date", "") if isinstance(f.get("date"), str) else "",
+                }
+            )
+    logs = sorted(
+        (root / "Areas" / "Work" / "Session-Logs").glob("*.md"), key=lambda q: q.stat().st_mtime
+    )
     last = None
     if logs:
         text = _read(logs[-1])
         m = re.search(r"\*\*Outcome:\*\*\s*(.*)", text)
-        last = {"name": logs[-1].stem, "outcome": m.group(1).strip() if m else "",
-                "quick": section(text, "quick reference")[:500]}
+        last = {
+            "name": logs[-1].stem,
+            "outcome": m.group(1).strip() if m else "",
+            "quick": section(text, "quick reference")[:500],
+        }
     return active[:8], last
 
 
@@ -132,6 +146,7 @@ def concept(root: Path, day: date) -> dict | None:
         for name in {n.strip() for n in LINK.findall(_read(p))} & topics.keys():
             counts[name] = counts.get(name, 0) + 1
             examples.setdefault(name, []).append(p.stem)
+
     def stub(name: str) -> bool:
         notes = section(_read(topics[name]), "notes").lower()
         return not notes or "empty" in notes
@@ -168,25 +183,37 @@ def packet(root: Path, day: date) -> tuple[str, dict]:
     else:
         out.append("(no daily note for yesterday, or it was empty)")
     out += ["", "## Projects & last session"]
-    out += [f"- [[{p['name']}]] — active" + (f" (since {p['date']})" if p["date"] else "") for p in active] \
-        or ["(no active projects)"]
+    out += [
+        f"- [[{p['name']}]] — active" + (f" (since {p['date']})" if p["date"] else "")
+        for p in active
+    ] or ["(no active projects)"]
     if last:
         out.append(f"Last session: [[{last['name']}]]")
         if last["outcome"] or last["quick"]:
             out.append("  " + (last["outcome"] or last["quick"].replace("\n", " ")))
     out += ["", "## Concept of the day"]
     if topic:
-        out.append(f"[[{topic['name']}]] — linked from {topic['inlinks']} notes; still a stub worth a "
-                   "5-minute review or expand.")
+        out.append(
+            f"[[{topic['name']}]] — linked from {topic['inlinks']} notes; still a stub worth a "
+            "5-minute review or expand."
+        )
         out.append("Appears in: " + (", ".join(f"[[{e}]]" for e in topic["examples"]) or "—"))
     else:
         out.append("(no topic graph yet)")
-    return "\n".join(out), {"open": len(open_), "due": len(due), "projects": len(active), "concept": bool(topic)}
+    return "\n".join(out), {
+        "open": len(open_),
+        "due": len(due),
+        "projects": len(active),
+        "concept": bool(topic),
+    }
 
 
 def plain(facts: str, day: date) -> str:
     """Returns the brief without a model: the packet under a greeting."""
-    return f"Good morning — here's {day:%A %d %B}.\n\n" + re.sub(r"^# Brief packet.*\n", "", facts).strip()
+    return (
+        f"Good morning — here's {day:%A %d %B}.\n\n"
+        + re.sub(r"^# Brief packet.*\n", "", facts).strip()
+    )
 
 
 def daily_note(root: Path, day: date) -> Path:
@@ -197,30 +224,46 @@ def daily_note(root: Path, day: date) -> Path:
     template = root / "System" / "Templates" / "Daily.md"
     p.parent.mkdir(parents=True, exist_ok=True)
     if template.exists():
-        p.write_text(_read(template).replace("{{date:YYYY-MM-DD}}", day.isoformat()), encoding="utf-8")
+        p.write_text(
+            _read(template).replace("{{date:YYYY-MM-DD}}", day.isoformat()), encoding="utf-8"
+        )
     else:
-        p.write_text(vault.set_fields(f"# {day:%A %-d %B %Y}\n\n",
-                                      {"type": "daily", "date": day.isoformat(), "tags": ["daily"]}))
+        p.write_text(
+            vault.set_fields(
+                f"# {day:%A %-d %B %Y}\n\n",
+                {"type": "daily", "date": day.isoformat(), "tags": ["daily"]},
+            )
+        )
     return p
 
 
 def insert(text: str, brief: str) -> str:
     """Returns the note with the brief block replaced, or added under its H1."""
     text = BLOCK.sub("", text)
-    block = [START, HEADER, "<!-- written by `hal brief`; running it again replaces this block -->",
-             *brief.strip().splitlines(), END]
+    block = [
+        START,
+        HEADER,
+        "<!-- written by `hal brief`; running it again replaces this block -->",
+        *brief.strip().splitlines(),
+        END,
+    ]
     lines = text.splitlines()
-    h1 = next((i for i, l in enumerate(lines) if H1.match(l.strip())), None)
+    h1 = next((i for i, line in enumerate(lines) if H1.match(line.strip())), None)
     if h1 is None:
-        return "\n".join(block + [""] + lines).rstrip() + "\n"
-    tail = lines[h1 + 1:]
+        return "\n".join([*block, "", *lines]).rstrip() + "\n"
+    tail = lines[h1 + 1 :]
     while tail and not tail[0].strip():
         tail.pop(0)
-    return "\n".join(lines[:h1 + 1] + [""] + block + [""] + tail).rstrip() + "\n"
+    return "\n".join([*lines[: h1 + 1], "", *block, "", *tail]).rstrip() + "\n"
 
 
-def brief(day: str = "", no_llm: bool = False, print_only: bool = False, model: str | None = None,
-          root: Path | None = None) -> dict:
+def brief(
+    day: str = "",
+    no_llm: bool = False,
+    print_only: bool = False,
+    model: str | None = None,
+    root: Path | None = None,
+) -> dict:
     """Builds the brief for a day (today by default), writes it into the daily note, and returns it."""
     root = Path(root or vault.root())
     when = date.fromisoformat(day) if day else date.today()
@@ -228,7 +271,9 @@ def brief(day: str = "", no_llm: bool = False, print_only: bool = False, model: 
     text, used = plain(facts, when), "none"
     if not no_llm:
         try:
-            reply = llm.chat(SYSTEM, facts, model=model, timeout=300, temperature=0.4, retries=1).strip()
+            reply = llm.chat(
+                SYSTEM, facts, model=model, timeout=300, temperature=0.4, retries=1
+            ).strip()
             if reply:
                 text, used = reply, model or llm.chat_model()
         except llm.Unavailable as e:

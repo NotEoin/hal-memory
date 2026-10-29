@@ -5,6 +5,7 @@ router) when HAL_CHAT_API=openai; HAL_CHAT_URL and HAL_MODEL pick the server and
 model. Embeddings always come from Ollama. Model work waits while another program
 (a training run, a llama.cpp server) holds the GPU. Stdlib only.
 """
+
 import json
 import os
 import subprocess
@@ -25,8 +26,12 @@ OWN = ("ollama", "GPT-SoVITS", "api_v2.py", "hal-voice", "halvoice", "faster_whi
 def gpu_busy() -> str | None:
     """Returns the name of a program other than Hal's own that is using the GPU, or None."""
     try:
-        out = subprocess.run(["nvidia-smi", "--query-compute-apps=pid,process_name", "--format=csv,noheader"],
-                             capture_output=True, text=True, timeout=10).stdout
+        out = subprocess.run(
+            ["nvidia-smi", "--query-compute-apps=pid,process_name", "--format=csv,noheader"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         return None
     ignore = OWN + tuple(shared().get("gpu_ignore", []))
@@ -34,7 +39,12 @@ def gpu_busy() -> str | None:
     for line in out.splitlines():
         pid, _, name = line.partition(",")
         try:
-            cmd = open(f"/proc/{pid.strip()}/cmdline", "rb").read().replace(b"\0", b" ").decode(errors="ignore")
+            cmd = (
+                open(f"/proc/{pid.strip()}/cmdline", "rb")
+                .read()
+                .replace(b"\0", b" ")
+                .decode(errors="ignore")
+            )
         except OSError:
             cmd = name
         if not any(i in cmd or i in name for i in ignore):
@@ -43,9 +53,11 @@ def gpu_busy() -> str | None:
 
 
 def _post(url: str, payload: dict, timeout: float) -> dict:
-    req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(  # noqa: S310 - the URL is the configured model server
+        url, data=json.dumps(payload).encode(), headers={"Content-Type": "application/json"}
+    )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
+        with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - as above
             return json.loads(r.read())
     except (OSError, ValueError) as e:
         raise Unavailable(f"{url}: {e}") from e
@@ -65,8 +77,15 @@ def chat_model() -> str:
     return os.environ.get("HAL_MODEL") or shared()["chat_model"]
 
 
-def chat_messages(messages: list[dict], *, model: str | None = None, temperature: float | None = None,
-                  json_out: bool = False, timeout: float = 300, retries: int = 0) -> str:
+def chat_messages(
+    messages: list[dict],
+    *,
+    model: str | None = None,
+    temperature: float | None = None,
+    json_out: bool = False,
+    timeout: float = 300,
+    retries: int = 0,
+) -> str:
     """Returns the model's reply to a conversation, retrying failed calls with a growing pause."""
     base = (os.environ.get("HAL_CHAT_URL") or shared()["ollama_url"]).rstrip("/")
     payload = {"model": model or chat_model(), "messages": messages, "stream": False}
@@ -100,17 +119,32 @@ def chat_messages(messages: list[dict], *, model: str | None = None, temperature
     raise AssertionError("unreachable")
 
 
-def chat(system: str, user: str, *, model: str | None = None, json_out: bool = False,
-         images: list[str] | None = None, timeout: float = 300, **kw) -> str:
+def chat(
+    system: str,
+    user: str,
+    *,
+    model: str | None = None,
+    json_out: bool = False,
+    images: list[str] | None = None,
+    timeout: float = 300,
+    **kw,
+) -> str:
     """Returns the model's reply to one prompt; images are base64 strings."""
     msg: dict = {"role": "user", "content": user}
     if images and chat_api() == "openai":
         msg["content"] = [{"type": "text", "text": user}] + [
-            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}"}} for b in images]
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b}"}}
+            for b in images
+        ]
     elif images:
         msg["images"] = images
-    return chat_messages([{"role": "system", "content": system}, msg], model=model, json_out=json_out,
-                         timeout=timeout, **kw)
+    return chat_messages(
+        [{"role": "system", "content": system}, msg],
+        model=model,
+        json_out=json_out,
+        timeout=timeout,
+        **kw,
+    )
 
 
 def chat_json(system: str, user: str, **kw) -> dict:

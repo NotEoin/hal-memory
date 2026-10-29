@@ -55,16 +55,37 @@ from datetime import datetime
 from pathlib import Path
 
 from . import llm
-from .config import settings, vault as config_vault
+from .config import settings
+from .config import vault as config_vault
 
 # ---- Hal's terminal voice ---------------------------------------------------
-BLUE = "\033[1;36m"; YELLOW = "\033[1;33m"; GREEN = "\033[1;32m"
-RED = "\033[1;31m"; DIM = "\033[2m"; OFF = "\033[0m"
-def hal(msg):  print(f"{BLUE}{msg}{OFF}", flush=True)
-def ok(msg):   print(f"{GREEN}  ✓ {msg}{OFF}", flush=True)
-def tick(msg): print(f"  {msg}", flush=True)
-def warn(msg): print(f"{YELLOW}  ! {msg}{OFF}", flush=True)
-def err(msg):  print(f"{RED}  ✗ {msg}{OFF}", flush=True)
+BLUE = "\033[1;36m"
+YELLOW = "\033[1;33m"
+GREEN = "\033[1;32m"
+RED = "\033[1;31m"
+DIM = "\033[2m"
+OFF = "\033[0m"
+
+
+def hal(msg):
+    print(f"{BLUE}{msg}{OFF}", flush=True)
+
+
+def ok(msg):
+    print(f"{GREEN}  ✓ {msg}{OFF}", flush=True)
+
+
+def tick(msg):
+    print(f"  {msg}", flush=True)
+
+
+def warn(msg):
+    print(f"{YELLOW}  ! {msg}{OFF}", flush=True)
+
+
+def err(msg):
+    print(f"{RED}  ✗ {msg}{OFF}", flush=True)
+
 
 HAL_SYSTEM = (
     "You are Hal, a concise, private study assistant running locally on the user's machine. "
@@ -84,6 +105,8 @@ HAL_SYSTEM = (
 
 # Set by the SIGINT handler so we stop cleanly between decks (not mid-note).
 STOP = False
+
+
 def _on_sigint(signum, frame):
     global STOP
     STOP = True
@@ -94,8 +117,9 @@ def _on_sigint(signum, frame):
 # ---- Talking to the local model ---------------------------------------------
 def call_model(messages, model, timeout=900, retries=2):
     """One isolated chat completion against the local model server."""
-    return llm.chat_messages(messages, model=model, temperature=0.3, timeout=timeout,
-                             retries=retries).strip()
+    return llm.chat_messages(
+        messages, model=model, temperature=0.3, timeout=timeout, retries=retries
+    ).strip()
 
 
 def clean_body(text):
@@ -126,33 +150,54 @@ def summarise_text(title, course, role, text, model, mock=False):
         partials = []
         for i, ch in enumerate(chunks, 1):
             tick(f"{DIM}· reading part {i}/{len(chunks)}…{OFF}")
-            partials.append(call_model([
-                {"role": "system", "content": HAL_SYSTEM},
-                {"role": "user", "content":
-                    f"This is part {i} of {len(chunks)} of the material for "
-                    f'"{title}". Pull out the teaching points and condense them into clear '
-                    f"study-note bullets in your own words (definitions and formulas too, if "
-                    f"any). Don't transcribe:\n\n{ch}"},
-            ], model))
+            partials.append(
+                call_model(
+                    [
+                        {"role": "system", "content": HAL_SYSTEM},
+                        {
+                            "role": "user",
+                            "content": f"This is part {i} of {len(chunks)} of the material for "
+                            f'"{title}". Pull out the teaching points and condense them into clear '
+                            f"study-note bullets in your own words (definitions and formulas too, if "
+                            f"any). Don't transcribe:\n\n{ch}",
+                        },
+                    ],
+                    model,
+                )
+            )
         text = "\n".join(partials)  # synthesise from the condensed bullets
 
-    body = call_model([
-        {"role": "system", "content": HAL_SYSTEM},
-        {"role": "user", "content": note_prompt(title, course, role, text)},
-    ], model)
+    body = call_model(
+        [
+            {"role": "system", "content": HAL_SYSTEM},
+            {"role": "user", "content": note_prompt(title, course, role, text)},
+        ],
+        model,
+    )
     return clean_body(body)
 
 
 def note_prompt(title, course, role, text):
     role_hint = {
-        "exercise": ("This is an exercise / problem sheet. Capture the problems it sets and the "
-                     "method to approach them; include worked steps only where the text gives them."),
-        "solution": ("This is a set of solutions. Capture each problem and its worked answer "
-                     "concisely, so it reads as a study aid."),
-        "exam": ("This is a past exam paper. Turn it into a revision checklist: the topics and "
-                 "the style of questions asked. Do NOT invent answers the paper doesn't contain."),
-    }.get(role, ("These are lecture slides. Condense them into clear, interpretable study notes — "
-                 "explain the ideas in your own words, don't transcribe the slides."))
+        "exercise": (
+            "This is an exercise / problem sheet. Capture the problems it sets and the "
+            "method to approach them; include worked steps only where the text gives them."
+        ),
+        "solution": (
+            "This is a set of solutions. Capture each problem and its worked answer "
+            "concisely, so it reads as a study aid."
+        ),
+        "exam": (
+            "This is a past exam paper. Turn it into a revision checklist: the topics and "
+            "the style of questions asked. Do NOT invent answers the paper doesn't contain."
+        ),
+    }.get(
+        role,
+        (
+            "These are lecture slides. Condense them into clear, interpretable study notes — "
+            "explain the ideas in your own words, don't transcribe the slides."
+        ),
+    )
     return (
         f'Source material titled "{title}" from the course "{course}". {role_hint}\n\n'
         "Write a self-contained revision note in Markdown (no YAML front matter, no surrounding "
@@ -179,10 +224,12 @@ def chunk_text(text, size):
     out, buf = [], ""
     for para in text.split("\n\n"):
         if len(buf) + len(para) + 2 > size and buf:
-            out.append(buf); buf = ""
+            out.append(buf)
+            buf = ""
         buf += para + "\n\n"
-        while len(buf) > size:                 # a single huge paragraph
-            out.append(buf[:size]); buf = buf[size:]
+        while len(buf) > size:  # a single huge paragraph
+            out.append(buf[:size])
+            buf = buf[size:]
     if buf.strip():
         out.append(buf)
     return out
@@ -190,6 +237,7 @@ def chunk_text(text, size):
 
 # ---- Path → Year / Course / Code / Role -------------------------------------
 _NAV_FOLDERS = {"linked materials", "pages", "slides", "files", "resources", "attachments"}
+
 
 def parse_year_course(relpath):
     """Derive (year, course_folder) from a staging-relative path.
@@ -234,8 +282,19 @@ def classify_role(filename):
         return "exam"
     if "solution" in n or "answers" in n or "sample answer" in n:
         return "solution"
-    if any(k in n for k in ("exercise", "sheet", "tutorial", "lab ", " lab", "practical",
-                            "worksheet", "problem")):
+    if any(
+        k in n
+        for k in (
+            "exercise",
+            "sheet",
+            "tutorial",
+            "lab ",
+            " lab",
+            "practical",
+            "worksheet",
+            "problem",
+        )
+    ):
         return "exercise"
     if "handout" in n:
         return "handout"
@@ -246,8 +305,8 @@ def dedup_base(filename):
     """Normalised stem used to spot a handout that duplicates a fuller deck."""
     n = Path(filename).stem.lower()
     n = re.sub(r"(?i)hand\s*outs?", "", n)
-    n = re.sub(r"\(\s*\d+\s*\)", "", n)        # "(1)" copy markers
-    n = re.sub(r"[\s_-]+\d+$", "", n)          # trailing copy/version number
+    n = re.sub(r"\(\s*\d+\s*\)", "", n)  # "(1)" copy markers
+    n = re.sub(r"[\s_-]+\d+$", "", n)  # trailing copy/version number
     n = re.sub(r"[^a-z0-9]+", "", n)
     return n
 
@@ -255,7 +314,7 @@ def dedup_base(filename):
 def clean_title(stem, code):
     t = stem
     if code and t.lower().startswith(code.lower()):
-        t = t[len(code):]
+        t = t[len(code) :]
     t = re.sub(r"[_]+", " ", t)
     t = re.sub(r"(?i)\bhand\s*outs?\b", "", t)
     t = re.sub(r"\s+", " ", t).strip(" -_")
@@ -281,8 +340,8 @@ def _is_structural_link(target):
     return (
         t == UNIVERSITY
         or low.endswith(" index")
-        or "#" in t                      # heading link into an index
-        or re.match(r"(?i)^\d{4}-\d{2}$", t)        # a year like 2025-26
+        or "#" in t  # heading link into an index
+        or re.match(r"(?i)^\d{4}-\d{2}$", t)  # a year like 2025-26
         or re.match(r"(?i)^year\s*\d+$", t)
     )
 
@@ -300,7 +359,7 @@ def extract_topic_links(body):
 def _topic_title(name):
     """Canonicalise a concept link to a stable note title (sentence case-ish)."""
     n = re.sub(r"\s+", " ", name).strip().strip(".,;:")
-    n = n.replace("/", "-").replace("\\", "-")          # filesystem-safe
+    n = n.replace("/", "-").replace("\\", "-")  # filesystem-safe
     return n
 
 
@@ -324,22 +383,36 @@ def ensure_topic_stub(vault, name):
             return existing
     path = topics_dir / f"{title}.md"
     path.write_text(
-        "\n".join([
-            "---", "type: topic", f"date: {datetime.now():%Y-%m-%d}",
-            f"tags: [topic, {course_slug(title)}]", "status: stub", "---", "",
-            f"# {title}", "",
-            "> Concept stub, auto-created by Hal. Every note that references "
-            f"**{title}** links here, so the backlinks panel below is the live "
-            "map of where it shows up across your modules.", "",
-            "## Notes", "",
-            "_(empty — Hal or you can flesh this out; the links already work.)_", "",
-            "## Appears in", "",
-            "```dataview",
-            "LIST",
-            'FROM [[]]',
-            "SORT file.name ASC",
-            "```", "",
-        ]) + "\n",
+        "\n".join(
+            [
+                "---",
+                "type: topic",
+                f"date: {datetime.now():%Y-%m-%d}",
+                f"tags: [topic, {course_slug(title)}]",
+                "status: stub",
+                "---",
+                "",
+                f"# {title}",
+                "",
+                "> Concept stub, auto-created by Hal. Every note that references "
+                f"**{title}** links here, so the backlinks panel below is the live "
+                "map of where it shows up across your modules.",
+                "",
+                "## Notes",
+                "",
+                "_(empty — Hal or you can flesh this out; the links already work.)_",
+                "",
+                "## Appears in",
+                "",
+                "```dataview",
+                "LIST",
+                "FROM [[]]",
+                "SORT file.name ASC",
+                "```",
+                "",
+            ]
+        )
+        + "\n",
         encoding="utf-8",
     )
     return path
@@ -348,9 +421,9 @@ def ensure_topic_stub(vault, name):
 def sync_topic_stubs(vault, body):
     """Create stubs for any concept links found in a freshly written note body."""
     made = 0
-    for name in dict.fromkeys(extract_topic_links(body)):   # dedup, keep order
+    for name in dict.fromkeys(extract_topic_links(body)):  # dedup, keep order
         p = ensure_topic_stub(vault, name)
-        if p and p.stat().st_mtime >= time.time() - 2:      # just created
+        if p and p.stat().st_mtime >= time.time() - 2:  # just created
             made += 1
     return made
 
@@ -375,11 +448,16 @@ def parse_report(report_path, vault):
             continue
         if cells[0].startswith("_(") or cells[0].startswith("*("):
             continue
-        rows.append({
-            "file": cells[0], "course": cells[1], "pages": cells[2],
-            "text": cells[3], "summary": cells[4],
-            "cache": cells[5].strip("`"),
-        })
+        rows.append(
+            {
+                "file": cells[0],
+                "course": cells[1],
+                "pages": cells[2],
+                "text": cells[3],
+                "summary": cells[4],
+                "cache": cells[5].strip("`"),
+            }
+        )
     return scan_dir, rows
 
 
@@ -446,8 +524,11 @@ def write_note(vault, row, scan_dir, body):
         except OSError:
             in_vault_src = None
 
-    date = safe_mtime_date(src_abs) if (src_abs and src_abs.is_file()) \
+    date = (
+        safe_mtime_date(src_abs)
+        if (src_abs and src_abs.is_file())
         else datetime.now().strftime("%Y-%m-%d")
+    )
     note_type = "lecture" if role == "lecture" else "note"
     tagslug = code.lower() if code else course_slug(course_folder)
     section = row.get("section", "")
@@ -456,7 +537,8 @@ def write_note(vault, row, scan_dir, body):
     note_path = dest_dir / f"{title}.md"
     n = 2
     while note_path.exists():
-        note_path = dest_dir / f"{title} ({n}).md"; n += 1
+        note_path = dest_dir / f"{title} ({n}).md"
+        n += 1
 
     fm = [
         "---",
@@ -570,6 +652,7 @@ _ROLE_GROUPS = [
     ("note", "Other notes"),
 ]
 
+
 def build_course_index(vault, year, course_folder, scan_dir):
     """(Re)generate the course's master link page from disk + Course structure.md.
 
@@ -588,7 +671,7 @@ def build_course_index(vault, year, course_folder, scan_dir):
     cmap = parse_course_map(scan_dir, year, course_folder)
     section_order = cmap["order"]
 
-    by_section = {}                       # section name -> [stems]
+    by_section = {}  # section name -> [stems]
     no_section = {key: [] for key, _ in _ROLE_GROUPS}
     total = 0
     for md in sorted(course_dir.glob("*.md")):
@@ -606,13 +689,21 @@ def build_course_index(vault, year, course_folder, scan_dir):
             no_section.setdefault(role, no_section.get("note")).append(md.stem)
 
     lines = [
-        "---", "type: index", f"date: {datetime.now():%Y-%m-%d}",
-        f"year: {year}", f"course: {cname}", f"code: {code}",
+        "---",
+        "type: index",
+        f"date: {datetime.now():%Y-%m-%d}",
+        f"year: {year}",
+        f"course: {cname}",
+        f"code: {code}",
         f"tags: [index, study, {code.lower() if code else course_slug(course_folder)}]",
-        "---", "",
-        f"# {cname}" + (f" ({code})" if code else "") + " — Index", "",
-        f"*[[{UNIVERSITY}]] › [[{year} Index|{year}]]*", "",
-        f"**{total}** note(s) filed in this module.", "",
+        "---",
+        "",
+        f"# {cname}" + (f" ({code})" if code else "") + " — Index",
+        "",
+        f"*[[{UNIVERSITY}]] › [[{year} Index|{year}]]*",
+        "",
+        f"**{total}** note(s) filed in this module.",
+        "",
     ]
 
     # Sections in Canvas teaching order first, then any extra sections we saw.
@@ -655,10 +746,17 @@ def build_year_index(vault, year):
         cname = clean_course_name(cdir.name)
         courses.append((index_link(code, cname), cname, code))
     lines = [
-        "---", "type: index", f"date: {datetime.now():%Y-%m-%d}",
-        f"year: {year}", "tags: [index, study, year]", "---", "",
-        f"# {year} — Courses", "",
-        f"*[[{UNIVERSITY}]] · [[_Index|Study]]*", "",
+        "---",
+        "type: index",
+        f"date: {datetime.now():%Y-%m-%d}",
+        f"year: {year}",
+        "tags: [index, study, year]",
+        "---",
+        "",
+        f"# {year} — Courses",
+        "",
+        f"*[[{UNIVERSITY}]] · [[_Index|Study]]*",
+        "",
     ]
     for link, cname, code in courses:
         label = f"{cname} ({code})" if code else cname
@@ -680,33 +778,48 @@ def build_university_index(vault):
     if not study.is_dir():
         return None
     years = sorted(
-        p.name for p in study.iterdir()
+        p.name
+        for p in study.iterdir()
         if p.is_dir() and re.match(r"(?i)^(year\s*\d+|\d{4}-\d{2}|\d{4})$", p.name.strip())
     )
     idx_path = study / f"{UNIVERSITY}.md"
     lines = [
-        "---", "type: index", f"date: {datetime.now():%Y-%m-%d}",
-        "tags: [index, study, university]", "---", "",
-        f"# {UNIVERSITY}", "",
+        "---",
+        "type: index",
+        f"date: {datetime.now():%Y-%m-%d}",
+        "tags: [index, study, university]",
+        "---",
+        "",
+        f"# {UNIVERSITY}",
+        "",
         "*Root of the study hierarchy: University › Academic year › Module › Section › Note.*",
-        "", "## Academic years", "",
+        "",
+        "## Academic years",
+        "",
     ]
     for y in years:
         lines.append(f"- [[{y} Index|{y}]]")
     if not years:
         lines.append("_No years yet — run `hal summarize` to populate._")
     lines += [
-        "", "## All modules",
-        "", "```dataview",
+        "",
+        "## All modules",
+        "",
+        "```dataview",
         "TABLE code AS Code, year AS Year",
         'FROM "Areas/Study"',
         'WHERE type = "index" AND code',
-        "SORT year ASC, code ASC", "```",
-        "", "## Topic web",
-        "", "```dataview",
+        "SORT year ASC, code ASC",
+        "```",
+        "",
+        "## Topic web",
+        "",
+        "```dataview",
         "LIST",
         'FROM "Areas/Study/Topics"',
-        "SORT file.name ASC", "```", "",
+        "SORT file.name ASC",
+        "```",
+        "",
     ]
     idx_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return idx_path
@@ -720,16 +833,24 @@ def write_session_log(vault, created, skipped, failed, unreadable, deduped, per_
         now = datetime.now()
         path = logdir / f"{now:%Y-%m-%d} Slide summarisation {now:%H%M}.md"
         lines = [
-            "---", "type: session", f"date: {now:%Y-%m-%d}",
-            "tags: [session, study, slides]", "---", "",
-            "# Slide summarisation run", "",
-            f"Ran the unattended summariser from {started:%H:%M} to {now:%H:%M}.", "",
+            "---",
+            "type: session",
+            f"date: {now:%Y-%m-%d}",
+            "tags: [session, study, slides]",
+            "---",
+            "",
+            "# Slide summarisation run",
+            "",
+            f"Ran the unattended summariser from {started:%H:%M} to {now:%H:%M}.",
+            "",
             f"- Notes created: **{created}**",
             f"- Skipped (already done): **{skipped}**",
             f"- Handout duplicates skipped: **{deduped}**",
             f"- Couldn't read (need OCR): **{unreadable}**",
-            f"- Failed: **{failed}**", "",
-            "## Per course", "",
+            f"- Failed: **{failed}**",
+            "",
+            "## Per course",
+            "",
         ]
         for c, n in sorted(per_course.items()):
             lines.append(f"- {c}: {n} new")
@@ -741,13 +862,19 @@ def write_session_log(vault, created, skipped, failed, unreadable, deduped, per_
 
 # ---- Main -------------------------------------------------------------------
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="hal-memory summarize", description="Hal's self-resuming slide summariser.")
+    ap = argparse.ArgumentParser(
+        prog="hal-memory summarize", description="Hal's self-resuming slide summariser."
+    )
     ap.add_argument("report", nargs="?", help="path to SLIDES-REPORT.md")
     ap.add_argument("--course", help="limit to one course (name, code, or folder)")
     ap.add_argument("--interactive", action="store_true", help="pause before each course")
     ap.add_argument("--limit", type=int, default=0, help="only the next N decks")
     ap.add_argument("--include-maybe", action="store_true", help="also do 'maybe' rows")
-    ap.add_argument("--model", default=llm.chat_model(), help="chat model (default: HAL_MODEL or [hal].chat_model)")
+    ap.add_argument(
+        "--model",
+        default=llm.chat_model(),
+        help="chat model (default: HAL_MODEL or [hal].chat_model)",
+    )
     ap.add_argument("--mock", action="store_true", help="no model call; write placeholder notes")
     args = ap.parse_args(argv)
     signal.signal(signal.SIGINT, _on_sigint)
@@ -788,12 +915,15 @@ def main(argv=None):
         is_maybe = "🟡" in r["summary"]
         # A "maybe" that only points at the structure/report files isn't a real
         # human summary — treat it as a gap.
-        false_maybe = is_maybe and ("Course structure.md" in r["summary"]
-                                    or "SLIDES-REPORT.md" in r["summary"])
+        false_maybe = is_maybe and (
+            "Course structure.md" in r["summary"] or "SLIDES-REPORT.md" in r["summary"]
+        )
         if not (is_gap or false_maybe or (args.include_maybe and is_maybe)):
             continue
         if args.course:
-            hay = f"{r['course_folder']} {clean_course_name(r['course_folder'])} {r['code']}".lower()
+            hay = (
+                f"{r['course_folder']} {clean_course_name(r['course_folder'])} {r['code']}".lower()
+            )
             if args.course.lower() not in hay:
                 continue
         if r["text"] not in ("text", "ocr"):
@@ -809,7 +939,8 @@ def main(argv=None):
     for r in queue:
         if r["role"] != "handout":
             nonhandout_bases.setdefault((r["year"], r["course_folder"]), set()).add(
-                dedup_base(r["file"]))
+                dedup_base(r["file"])
+            )
     deduped = 0
     pruned = []
     for r in queue:
@@ -833,19 +964,25 @@ def main(argv=None):
         if deduped:
             tick(f"{DIM}({deduped} handout duplicate(s) skipped.){OFF}")
         if unreadable:
-            warn(f"({unreadable} deck(s) are image-only — re-run hal-memory import prepare --ocr to read them.)")
+            warn(
+                f"({unreadable} deck(s) are image-only — re-run hal-memory import prepare --ocr to read them.)"
+            )
         return 0
-    tick(f"{len(todo)} item(s) still need a note, across {len(touched_courses)} course(s). "
-         f"{len(queue) - len(todo)} already done.")
+    tick(
+        f"{len(todo)} item(s) still need a note, across {len(touched_courses)} course(s). "
+        f"{len(queue) - len(todo)} already done."
+    )
     if deduped:
         tick(f"{DIM}Skipping {deduped} handout duplicate(s) of fuller decks.{OFF}")
     if unreadable:
         warn(f"{unreadable} deck(s) are image-only (need OCR) — I'll list them at the end.")
-    tick(f"{DIM}I save each note as I go, so you can stop me anytime (Ctrl-C) and just "
-         f"run me again to continue.{OFF}")
+    tick(
+        f"{DIM}I save each note as I go, so you can stop me anytime (Ctrl-C) and just "
+        f"run me again to continue.{OFF}"
+    )
 
     if args.limit:
-        todo = todo[:args.limit]
+        todo = todo[: args.limit]
         tick(f"{DIM}(--limit {args.limit}: I'll do the next {len(todo)} and stop.){OFF}")
 
     created = failed = 0
@@ -871,7 +1008,8 @@ def main(argv=None):
             except EOFError:
                 ans = "y"
             if ans in ("n", "no", "q", "quit"):
-                tick("Skipping for now."); continue
+                tick("Skipping for now.")
+                continue
 
         for r in decks:
             if STOP:
@@ -879,19 +1017,24 @@ def main(argv=None):
             title = clean_title(Path(r["file"]).stem, r["code"])
             cache_abs = (vault / r["cache"]).resolve()
             if not cache_abs.is_file():
-                warn(f"{title}: cached text missing — skipping."); failed += 1; continue
+                warn(f"{title}: cached text missing — skipping.")
+                failed += 1
+                continue
             text = cache_abs.read_text(encoding="utf-8", errors="ignore").strip()
             if len(text) < 20:
-                warn(f"{title}: barely any text — skipping (needs OCR)."); unreadable += 1; continue
+                warn(f"{title}: barely any text — skipping (needs OCR).")
+                unreadable += 1
+                continue
             try:
                 t0 = time.time()
                 body = summarise_text(title, cname, r["role"], text, args.model, mock=args.mock)
                 if not body or len(body) < 20:
                     raise RuntimeError("model returned almost nothing")
                 note = write_note(vault, r, scan_dir, body)
-                created += 1; per_course[cname] = per_course.get(cname, 0) + 1
-                ok(f"{title}  {DIM}({time.time()-t0:.0f}s → {note.relative_to(vault)}){OFF}")
-            except Exception as e:                       # noqa: BLE001 — keep grinding
+                created += 1
+                per_course[cname] = per_course.get(cname, 0) + 1
+                ok(f"{title}  {DIM}({time.time() - t0:.0f}s → {note.relative_to(vault)}){OFF}")
+            except Exception as e:  # noqa: BLE001 — keep grinding
                 failed += 1
                 err(f"{title}: {e}")
 
@@ -924,8 +1067,9 @@ def main(argv=None):
         tick(f"Failed (will retry next run): {RED}{failed}{OFF}")
     tick(f"{DIM}Time: ~{mins} min{OFF}")
 
-    log = write_session_log(vault, created, len(queue) - len(todo), failed, unreadable,
-                            deduped, per_course, started)
+    log = write_session_log(
+        vault, created, len(queue) - len(todo), failed, unreadable, deduped, per_course, started
+    )
     if log:
         tick(f"{DIM}Logged this run to {log.relative_to(vault)}{OFF}")
 

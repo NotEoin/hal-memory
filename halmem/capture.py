@@ -3,6 +3,7 @@
 Everything lands in +Inbox/ or in a dated note first; the sorter files and
 links it later, so capture is instant and never needs the local model.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -12,12 +13,18 @@ from . import vault
 from .config import settings
 
 
-def remember(text: str, title: str = "", tags: list[str] | None = None, source: str = "hal") -> Path:
+def remember(
+    text: str, title: str = "", tags: list[str] | None = None, source: str = "hal"
+) -> Path:
     """Writes a capture to the inbox and returns its path."""
     stamp = datetime.now().strftime("%Y-%m-%d %H%M%S")
     name = f"{stamp} {vault.slug(title or text.split(chr(10))[0], 50)}"
-    return vault.write_new(settings()["inbox"], name, text.strip() + "\n",
-                           {"created": vault.now(), "source": source, "tags": tags or [], "hal": "inbox"})
+    return vault.write_new(
+        settings()["inbox"],
+        name,
+        text.strip() + "\n",
+        {"created": vault.now(), "source": source, "tags": tags or [], "hal": "inbox"},
+    )
 
 
 def daily_note(day: str | None = None) -> Path:
@@ -27,7 +34,11 @@ def daily_note(day: str | None = None) -> Path:
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         d = datetime.strptime(day, "%Y-%m-%d")
-        path.write_text(vault.set_fields(f"# {d:%A %-d %B %Y}\n\n", {"type": "daily", "date": day, "tags": ["daily"]}))
+        path.write_text(
+            vault.set_fields(
+                f"# {d:%A %-d %B %Y}\n\n", {"type": "daily", "date": day, "tags": ["daily"]}
+            )
+        )
     return path
 
 
@@ -38,13 +49,23 @@ def log_conversation(user: str, assistant: str, channel: str = "voice") -> Path:
     path = vault.inside(folder / f"{day} Conversations.md")
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(vault.set_fields(f"# Conversations on {day}\n\nDay: [[{day}]]\n",
-                                         {"type": "conversation", "date": day, "tags": ["conversation"],
-                                          "hal": "needs-index"}))
+        path.write_text(
+            vault.set_fields(
+                f"# Conversations on {day}\n\nDay: [[{day}]]\n",
+                {
+                    "type": "conversation",
+                    "date": day,
+                    "tags": ["conversation"],
+                    "hal": "needs-index",
+                },
+            )
+        )
         _daily_link(day, path.stem)
     t = datetime.now().strftime("%H:%M")
     with path.open("a") as f:
-        f.write(f"\n## {t} ({channel})\n\n**You:** {user.strip()}\n\n**Hal:** {assistant.strip()}\n")
+        f.write(
+            f"\n## {t} ({channel})\n\n**You:** {user.strip()}\n\n**Hal:** {assistant.strip()}\n"
+        )
     return path
 
 
@@ -59,9 +80,12 @@ def profile_path() -> Path:
     path = vault.inside(Path(settings()["profile_note"]))
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(vault.set_fields(
-            "# Profile\n\nWhat Hal knows about you. Hal reads this first and adds to it when told a lasting fact.\n\n## Facts\n\n",
-            {"type": "profile", "tags": ["system", "profile"]}))
+        path.write_text(
+            vault.set_fields(
+                "# Profile\n\nWhat Hal knows about you. Hal reads this first and adds to it when told a lasting fact.\n\n## Facts\n\n",
+                {"type": "profile", "tags": ["system", "profile"]},
+            )
+        )
     return path
 
 

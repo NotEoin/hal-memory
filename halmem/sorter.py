@@ -6,9 +6,9 @@ mentions, and its confidence. The note moves to the category's folder with that
 frontmatter; each entity gets a note of its own if it has none, and is linked.
 Low-confidence notes are filed but marked needs-review for another pass.
 """
+
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from . import llm, vault
@@ -26,8 +26,13 @@ CLASSIFY = """You file notes in a personal Obsidian vault. Reply with JSON only:
  "confidence": 0.0 to 1.0, how sure you are of the category}}
 Use names exactly as written in the note. Existing people and projects in the vault: {known}."""
 
-ENTITY_FOLDERS = {"people": "person", "organisations": "organisation", "places": "place",
-                  "projects": "project", "topics": "topic"}
+ENTITY_FOLDERS = {
+    "people": "person",
+    "organisations": "organisation",
+    "places": "place",
+    "projects": "project",
+    "topics": "topic",
+}
 
 
 def inbox() -> Path:
@@ -40,8 +45,10 @@ def pending(limit: int | None = None) -> list[Path]:
     if not d.exists():
         return []
     # README and underscore files describe the inbox itself and stay put.
-    items = sorted((p for p in d.glob("*.md") if p.stem.lower() != "readme" and not p.name.startswith("_")),
-                   key=lambda p: p.stat().st_mtime)
+    items = sorted(
+        (p for p in d.glob("*.md") if p.stem.lower() != "readme" and not p.name.startswith("_")),
+        key=lambda p: p.stat().st_mtime,
+    )
     return items[:limit] if limit else items
 
 
@@ -84,8 +91,17 @@ def ensure_entity(kind: str, name: str, source_title: str) -> Path | None:
         return existing
     folder = settings()["folders"][ENTITY_FOLDERS[kind]]
     body = f"# {name}\n\nFirst mentioned in [[{source_title}]].\n"
-    note = vault.write_new(folder, name, body, {"type": ENTITY_FOLDERS[kind], "created": vault.now(),
-                                                "hal": "needs-index", "tags": [ENTITY_FOLDERS[kind]]})
+    note = vault.write_new(
+        folder,
+        name,
+        body,
+        {
+            "type": ENTITY_FOLDERS[kind],
+            "created": vault.now(),
+            "hal": "needs-index",
+            "tags": [ENTITY_FOLDERS[kind]],
+        },
+    )
     _titles()[name.lower()] = note
     return note
 
@@ -109,23 +125,43 @@ def file_note(path: Path, decision: dict) -> Path:
     if actions and "## Actions" not in body:
         body = body.rstrip() + "\n\n## Actions\n\n" + "".join(f"- [ ] {a}\n" for a in actions)
     if entities:
-        body = body.rstrip() + "\n\nRelated: " + ", ".join(f"[[{e}]]" for e in dict.fromkeys(entities)) + "\n"
-    tags = sorted({*(meta.get("tags") or []), *(t.lower().replace(" ", "-") for t in decision.get("tags") or [])})
-    new_meta = {"created": meta.get("created") or vault.now(), "type": decision["category"], "tags": tags,
-                "summary": decision.get("summary", ""), "hal": status, "hal-confidence": round(confidence, 2),
-                "source": meta.get("source") or "inbox"}
+        body = (
+            body.rstrip()
+            + "\n\nRelated: "
+            + ", ".join(f"[[{e}]]" for e in dict.fromkeys(entities))
+            + "\n"
+        )
+    tags = sorted(
+        {
+            *(meta.get("tags") or []),
+            *(t.lower().replace(" ", "-") for t in decision.get("tags") or []),
+        }
+    )
+    new_meta = {
+        "created": meta.get("created") or vault.now(),
+        "type": decision["category"],
+        "tags": tags,
+        "summary": decision.get("summary", ""),
+        "hal": status,
+        "hal-confidence": round(confidence, 2),
+        "source": meta.get("source") or "inbox",
+    }
     folder = cfg["folders"][decision["category"]]
     dest = vault.write_new(folder, title, body, new_meta)
     path.unlink()
     _titles()[dest.stem.lower()] = dest
     Linker(_titles()).link_note(dest)
-    add_to_daily(f"Filed [[{dest.stem}]] in {folder}" + (" (needs review)" if status == "needs-review" else ""))
+    add_to_daily(
+        f"Filed [[{dest.stem}]] in {folder}"
+        + (" (needs review)" if status == "needs-review" else "")
+    )
     return dest
 
 
 def add_to_daily(line: str) -> None:
     """Appends a line under 'Hal' in today's daily note, creating the note if needed."""
     from .capture import daily_note
+
     p = daily_note()
     text = p.read_text()
     if "\n## Hal\n" not in text:
@@ -149,8 +185,13 @@ def sort(limit: int | None = None) -> list[dict]:
                 continue
             decision = classify(text)
             dest = file_note(path, decision)
-            results.append({"note": vault.rel(dest), "category": decision["category"],
-                            "confidence": decision.get("confidence")})
+            results.append(
+                {
+                    "note": vault.rel(dest),
+                    "category": decision["category"],
+                    "confidence": decision.get("confidence"),
+                }
+            )
         except llm.Unavailable as e:
             results.append({"error": str(e)})
             break

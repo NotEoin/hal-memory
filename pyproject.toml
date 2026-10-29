@@ -43,7 +43,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "BLE", "S", "T20", "RUF", "PLC2401"]
 # S603 and S607 flag every subprocess call; argv-only calls with a timeout are the design.
-ignore = ["S603", "S607"]
+ignore = [
+  "S603",
+  "S607",
+  "E501",  # the formatter wraps code; prose strings and comments are left as written
+]
 
 [tool.pytest.ini_options]
 addopts = "-m 'not network'"
@@ -54,3 +58,8 @@ markers = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]  # pytest reports assert failures with full introspection
+"halmem/__main__.py" = ["T201"]  # entry point: prints results for the person at the terminal
+"halmem/cli.py" = ["T201"]  # entry point: subcommand output
+"halmem/install.py" = ["T201"]  # entry point: `hal-memory setup` progress
+"halmem/idle.py" = ["T201"]  # entry point: the idle service's log lines
+"halmem/summarize.py" = ["T201"]  # entry point: `hal-memory summarize` progress

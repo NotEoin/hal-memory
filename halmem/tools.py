@@ -1,4 +1,5 @@
 """hal-memory's tools, as declared in hal-module.toml."""
+
 from __future__ import annotations
 
 import json
@@ -10,7 +11,10 @@ from .config import data_dir
 
 def remember(text: str, title: str = "", tags: list[str] | None = None) -> dict:
     p = capture.remember(text, title, tags)
-    return {"saved": vault.rel(p), "note": "it will be filed and linked when the computer is next idle"}
+    return {
+        "saved": vault.rel(p),
+        "note": "it will be filed and linked when the computer is next idle",
+    }
 
 
 def remember_fact(fact: str) -> str:
@@ -69,12 +73,16 @@ def sort_inbox(limit: int = 10) -> list[dict]:
 def link(note: str = "", limit: int = 200) -> dict:
     """Runs the wikilink pass on one note, or on up to `limit` notes."""
     from .linker import Linker
+
     linker = Linker()
     if note:
         found = read(note)
         if "error" in found:
             return found
-        return {"note": found["path"], "links_added": linker.link_note(vault.inside(Path(found["path"])))}
+        return {
+            "note": found["path"],
+            "links_added": linker.link_note(vault.inside(Path(found["path"]))),
+        }
     total = 0
     for p in vault.notes()[: int(limit)]:
         total += linker.link_note(p)
@@ -89,8 +97,12 @@ def tidy(limit: int = 25) -> dict:
 def status() -> dict:
     inbox = sorter.pending()
     last = data_dir() / "last-pass.json"
-    return {"vault": str(vault.root()), "inbox": len(inbox), **audit.status(),
-            "last_pass": json.loads(last.read_text()) if last.exists() else None}
+    return {
+        "vault": str(vault.root()),
+        "inbox": len(inbox),
+        **audit.status(),
+        "last_pass": json.loads(last.read_text()) if last.exists() else None,
+    }
 
 
 def update_index(limit: int = 400) -> dict:
@@ -100,4 +112,5 @@ def update_index(limit: int = 400) -> dict:
 def brief(date: str = "", no_llm: bool = False, print_only: bool = False) -> dict:
     """Writes the morning brief into the day's daily note and returns it."""
     from . import brief as briefing
+
     return briefing.brief(date, no_llm=no_llm, print_only=print_only)

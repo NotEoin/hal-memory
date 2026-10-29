@@ -4,6 +4,7 @@ Links the first mention of each known note title or alias in a note's body,
 leaving frontmatter, code, headings, URLs and existing links alone. Names
 shared by two notes are never linked, since Obsidian could not tell them apart.
 """
+
 from __future__ import annotations
 
 import re
@@ -15,7 +16,8 @@ from .config import settings
 # Regions that must never be rewritten: fenced and inline code, links, URLs and headings.
 PROTECTED = re.compile(
     r"```.*?```|~~~.*?~~~|`[^`\n]*`|\[\[[^\]]*\]\]|!?\[[^\]]*\]\([^)]*\)|https?://\S+|^#+ .*$|<[^>\n]+>",
-    re.S | re.M)
+    re.S | re.M,
+)
 
 
 class Linker:
@@ -25,8 +27,13 @@ class Linker:
         self.index = index if index is not None else vault.title_index()
         names = sorted(self.index, key=len, reverse=True)
         # One alternation, longest names first, so "Machine Learning Systems" wins over "Machine Learning".
-        self.pattern = re.compile(r"(?<![\w\[/])(" + "|".join(re.escape(n) for n in names) + r")(?![\w\]])",
-                                  re.I) if names else None
+        self.pattern = (
+            re.compile(
+                r"(?<![\w\[/])(" + "|".join(re.escape(n) for n in names) + r")(?![\w\]])", re.I
+            )
+            if names
+            else None
+        )
 
     def _linkable(self, key: str, found: str) -> bool:
         """A one-word name links only as a proper noun or technical term: capitals in the
@@ -44,7 +51,7 @@ class Linker:
         for existing in re.findall(r"\[\[([^\]|#]+)", body):
             done.add(existing.strip().lower())
         added = 0
-        out, pos = [], 0
+        out = []
         for chunk_start, chunk_end, protected in _segments(body):
             text = body[chunk_start:chunk_end]
             if protected or added >= limit:

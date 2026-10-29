@@ -3,6 +3,7 @@
 Frontmatter is edited line by line, so keys Hal does not manage are kept
 exactly as written. Every path is checked to stay inside the vault.
 """
+
 from __future__ import annotations
 
 import re
@@ -50,7 +51,7 @@ def slug(text: str, limit: int = 80) -> str:
 def split(text: str) -> tuple[str, str]:
     """Returns (frontmatter block without fences, body)."""
     m = FRONT.match(text)
-    return (m.group(1), text[m.end():]) if m else ("", text)
+    return (m.group(1), text[m.end() :]) if m else ("", text)
 
 
 def fields(text: str) -> dict:
@@ -89,7 +90,9 @@ def set_fields(text: str, updates: dict) -> str:
     block, body = split(text)
     lines = block.splitlines() if block else []
     for key, value in updates.items():
-        start = next((i for i, l in enumerate(lines) if re.match(rf"^{re.escape(key)}:", l)), None)
+        start = next(
+            (i for i, line in enumerate(lines) if re.match(rf"^{re.escape(key)}:", line)), None
+        )
         if start is not None:
             end = start + 1
             while end < len(lines) and re.match(r"^\s+-\s|^\s*-\s", lines[end]):
@@ -131,10 +134,36 @@ def folders() -> dict:
     return settings()["folders"]
 
 
-GENERIC = {"index", "_index", "readme", "start here", "untitled", "home", "notes", "todo", "tasks",
-           "inbox", "summary", "overview", "introduction", "conclusion", "references", "template",
-           "slides", "week", "lecture", "lab", "session-log", "meeting", "daily", "claude",
-           "claude-archive", "profile", "dashboard", "start"}
+GENERIC = {
+    "index",
+    "_index",
+    "readme",
+    "start here",
+    "untitled",
+    "home",
+    "notes",
+    "todo",
+    "tasks",
+    "inbox",
+    "summary",
+    "overview",
+    "introduction",
+    "conclusion",
+    "references",
+    "template",
+    "slides",
+    "week",
+    "lecture",
+    "lab",
+    "session-log",
+    "meeting",
+    "daily",
+    "claude",
+    "claude-archive",
+    "profile",
+    "dashboard",
+    "start",
+}
 
 
 def title_index() -> dict[str, Path]:
@@ -153,8 +182,12 @@ def title_index() -> dict[str, Path]:
             names.append(aliases)
         for n in names:
             key = n.strip().lower()
-            if (len(key) < 4 or key in GENERIC or re.fullmatch(r"[\d\s._-]+", key)
-                    or re.fullmatch(r"\d{4}-\d{2}-\d{2}.*", key)):
+            if (
+                len(key) < 4
+                or key in GENERIC
+                or re.fullmatch(r"[\d\s._-]+", key)
+                or re.fullmatch(r"\d{4}-\d{2}-\d{2}.*", key)
+            ):
                 continue
             seen.setdefault(key, []).append(p)
     # A name shared by two notes is ambiguous in Obsidian, so it is never auto-linked.

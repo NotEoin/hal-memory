@@ -2,6 +2,7 @@
 
 The shared [hal] table supplies the vault path and the local model settings.
 """
+
 import os
 import tomllib
 from pathlib import Path
@@ -32,13 +33,13 @@ DEFAULTS: dict = {
     "inbox": "+Inbox",
     "daily_folder": "Calendar/Daily",
     "profile_note": "System/Profile.md",
-    "review_below": 0.6,        # classifier confidence under this marks a note needs-review
-    "idle_minutes": 10,         # how long the desktop must be idle before a sorting pass
-    "batch": 25,                # notes per pass, so a pass never runs for long
+    "review_below": 0.6,  # classifier confidence under this marks a note needs-review
+    "idle_minutes": 10,  # how long the desktop must be idle before a sorting pass
+    "batch": 25,  # notes per pass, so a pass never runs for long
     "max_links_per_note": 40,
-    "related_min": 0.8,         # semantic similarity a note needs to be listed as Related
-    "answerer": "local",        # who writes recall answers: local (the chat model) or claude (claude -p)
-    "university": "University", # root note of the study hierarchy that summarize builds
+    "related_min": 0.8,  # semantic similarity a note needs to be listed as Related
+    "answerer": "local",  # who writes recall answers: local (the chat model) or claude (claude -p)
+    "university": "University",  # root note of the study hierarchy that summarize builds
 }
 SHARED = {
     "vault": "~/Documents/vaults/Hal",

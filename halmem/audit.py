@@ -6,6 +6,7 @@ never re-checked. fix() works through the problems: the wikilink pass, a
 "Related" line built from the semantic index, folder index notes that give
 every note a backlink, and a second classification for needs-review notes.
 """
+
 from __future__ import annotations
 
 import re
@@ -19,8 +20,17 @@ from .linker import Linker
 
 LINK = re.compile(r"\[\[([^\]|#]+)")
 # Folders whose notes get a generated index note listing them all.
-INDEXED = ("People", "Organisations", "Places", "Topics", "Resources", "Conversations",
-           "Areas/Personal/Ideas", "Areas/Study/Notes", "Areas/Job Search/Notes")
+INDEXED = (
+    "People",
+    "Organisations",
+    "Places",
+    "Topics",
+    "Resources",
+    "Conversations",
+    "Areas/Personal/Ideas",
+    "Areas/Study/Notes",
+    "Areas/Job Search/Notes",
+)
 INDEX_DIR = "System/Indexes"
 
 
@@ -82,8 +92,10 @@ def audit(limit: int = 2000) -> dict:
         if seen.get(r) == m:
             continue
         found = issues_for(p, out.get(r, set()), back.get(p.stem.lower(), 0))
-        con.execute("INSERT OR REPLACE INTO notes (path, mtime, checked, issues) VALUES (?, ?, ?, ?)",
-                    (r, m, time.time(), ",".join(found)))
+        con.execute(
+            "INSERT OR REPLACE INTO notes (path, mtime, checked, issues) VALUES (?, ?, ?, ?)",
+            (r, m, time.time(), ",".join(found)),
+        )
         checked += 1
         if checked >= limit:
             break
@@ -103,7 +115,9 @@ def status() -> dict:
 def _orphan_folders() -> list[str]:
     """Folders holding notes that nothing links to, so they get an index note too."""
     rows = _db().execute("SELECT path FROM notes WHERE issues LIKE '%orphan%'").fetchall()
-    return sorted({str(Path(r).parent) for (r,) in rows if str(Path(r).parent) not in (".", INDEX_DIR)})
+    return sorted(
+        {str(Path(r).parent) for (r,) in rows if str(Path(r).parent) not in (".", INDEX_DIR)}
+    )
 
 
 def build_indexes() -> int:
@@ -117,13 +131,22 @@ def build_indexes() -> int:
         if not members:
             continue
         name = folder.replace("/", " - ")
-        lines = [f"# {name}", "", f"Every note in `{folder}`, kept current by Hal's quality pass.", ""]
+        lines = [
+            f"# {name}",
+            "",
+            f"Every note in `{folder}`, kept current by Hal's quality pass.",
+            "",
+        ]
         for p in members:
             summary = vault.fields(p.read_text(errors="ignore")[:1500]).get("summary")
-            lines.append(f"- [[{p.stem}]]" + (f": {summary}" if isinstance(summary, str) and summary else ""))
+            lines.append(
+                f"- [[{p.stem}]]" + (f": {summary}" if isinstance(summary, str) and summary else "")
+            )
         target = vault.inside(Path(INDEX_DIR) / f"{name}.md")
         target.parent.mkdir(parents=True, exist_ok=True)
-        text = vault.set_fields("\n".join(lines) + "\n", {"type": "index", "tags": ["index"], "hal": "generated"})
+        text = vault.set_fields(
+            "\n".join(lines) + "\n", {"type": "index", "tags": ["index"], "hal": "generated"}
+        )
         if not target.exists() or target.read_text() != text:
             target.write_text(text)
             written += 1
@@ -140,18 +163,24 @@ def _real_links(body: str) -> list[str]:
 
 def _related(path: Path, limit: int = 3) -> list[str]:
     from .search import semantic
+
     text = vault.split(path.read_text(errors="ignore"))[1]
     hits = semantic(f"{path.stem}\n{text[:800]}", limit + 1)
     floor = float(settings().get("related_min", 0.8))
-    return [h["note"] for h in hits if h["note"] != path.stem and h.get("score", 0) >= floor][:limit]
+    return [h["note"] for h in hits if h["note"] != path.stem and h.get("score", 0) >= floor][
+        :limit
+    ]
 
 
 def fix(limit: int | None = None) -> dict:
     """Works through recorded problems; returns what was done."""
     limit = limit or settings()["batch"]
     con = _db()
-    rows = con.execute("""SELECT path, issues FROM notes WHERE issues != '' AND (fixed IS NULL OR fixed < checked)
-                          ORDER BY checked LIMIT ?""", (limit,)).fetchall()
+    rows = con.execute(
+        """SELECT path, issues FROM notes WHERE issues != '' AND (fixed IS NULL OR fixed < checked)
+                          ORDER BY checked LIMIT ?""",
+        (limit,),
+    ).fetchall()
     linker = Linker()
     done = {"linked": 0, "related": 0, "reclassified": 0, "indexes": build_indexes()}
     gpu_free = llm.gpu_busy() is None
@@ -178,7 +207,11 @@ def fix(limit: int | None = None) -> dict:
                 # Before a trailing Dataview block, so the query stays the last thing in a stub.
                 line = "Related: " + ", ".join(f"[[{n}]]" for n in rel) + "\n"
                 marker = "\n## Appears in"
-                text = text.replace(marker, f"\n{line}{marker}", 1) if marker in text else text.rstrip("\n") + f"\n\n{line}"
+                text = (
+                    text.replace(marker, f"\n{line}{marker}", 1)
+                    if marker in text
+                    else text.rstrip("\n") + f"\n\n{line}"
+                )
                 p.write_text(text)
                 done["related"] += 1
         if gpu_free and "needs-review" in found:
@@ -200,10 +233,19 @@ def fix(limit: int | None = None) -> dict:
 def _reclassify(path: Path) -> int:
     """Asks the stronger model to confirm a doubtful filing; marks the note ok when it agrees."""
     from .sorter import classify
+
     text = path.read_text(errors="ignore")
     decision = classify(text)
     if float(decision.get("confidence") or 0) >= settings()["review_below"]:
-        path.write_text(vault.set_fields(text, {"hal": "ok", "hal-confidence": decision.get("confidence"),
-                                               "summary": vault.fields(text).get("summary") or decision.get("summary")}))
+        path.write_text(
+            vault.set_fields(
+                text,
+                {
+                    "hal": "ok",
+                    "hal-confidence": decision.get("confidence"),
+                    "summary": vault.fields(text).get("summary") or decision.get("summary"),
+                },
+            )
+        )
         return 1
     return 0
