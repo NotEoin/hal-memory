@@ -23,7 +23,9 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # The vault is [hal].vault in ~/.config/hal/config.toml; HAL_VAULT overrides it for one run.
-VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." python3 -c 'from halmem.config import vault; print(vault())')}"
+# Every external tool call below runs under `timeout`, so one corrupt file cannot hang a batch.
+TOOL_TIMEOUT="${HAL_TOOL_TIMEOUT:-120}"  # seconds
+VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." timeout "$TOOL_TIMEOUT" python3 -c 'from halmem.config import vault; print(vault())')}"
 CODE="$VAULT/Areas/Code"
 REPORT="$CODE/CODE-REPORT.md"
 
@@ -164,10 +166,10 @@ write_local_note() { # $1=repo abs path
   lang="$(detect_language "$repo")"
   stack="$(detect_stack "$repo")"
   readme="$(find_readme "$repo")"
-  remote="$(git -C "$repo" remote get-url origin 2>/dev/null || git -C "$repo" config --get remote.origin.url 2>/dev/null || true)"
+  remote="$(timeout "$TOOL_TIMEOUT" git -C "$repo" remote get-url origin 2>/dev/null || timeout "$TOOL_TIMEOUT" git -C "$repo" config --get remote.origin.url 2>/dev/null || true)"
   remote="$(strip_creds "${remote:-}")"
-  branch="$(git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
-  last_commit="$(git -C "$repo" log -1 --format=%cs 2>/dev/null || echo '')"
+  branch="$(timeout "$TOOL_TIMEOUT" git -C "$repo" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+  last_commit="$(timeout "$TOOL_TIMEOUT" git -C "$repo" log -1 --format=%cs 2>/dev/null || echo '')"
   today="$(date +%F)"
   if [ -n "$remote" ]; then loc="local+github"; else loc="local"; fi
 
@@ -316,7 +318,7 @@ for base in "${SCAN_PATHS[@]:-}"; do
     [ -n "${SEEN[$repo]:-}" ] && continue
     SEEN[$repo]=1
     write_local_note "$repo"
-  done < <(find "$base" -maxdepth "$DEPTH" -type d -name .git -prune -print0 2>/dev/null | sort -z)
+  done < <(timeout "$TOOL_TIMEOUT" find "$base" -maxdepth "$DEPTH" -type d -name .git -prune -print0 2>/dev/null | sort -z)
 done
 
 # ---- Report -----------------------------------------------------------------

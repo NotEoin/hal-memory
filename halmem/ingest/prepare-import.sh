@@ -18,7 +18,9 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # The vault is [hal].vault in ~/.config/hal/config.toml; HAL_VAULT overrides it for one run.
-VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." python3 -c 'from halmem.config import vault; print(vault())')}"
+# Every external tool call below runs under `timeout`, so one corrupt file cannot hang a batch.
+TOOL_TIMEOUT="${HAL_TOOL_TIMEOUT:-120}"  # seconds
+VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." timeout "$TOOL_TIMEOUT" python3 -c 'from halmem.config import vault; print(vault())')}"
 
 c_blue=$'\033[1;36m'; c_yellow=$'\033[1;33m'; c_green=$'\033[1;32m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
 log()  { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }

@@ -24,6 +24,8 @@ from pathlib import Path
 
 from .config import settings, vault
 
+# Upper bound for one pipeline script; each external tool inside it has its own, shorter timeout.
+INGEST_TIMEOUT = 6 * 3600  # seconds
 PACKAGE = Path(__file__).resolve().parent
 INGEST = PACKAGE / "ingest"
 EXTRACTORS = {
@@ -49,7 +51,12 @@ def _script(name: str, args: list[str]) -> int:
         ),
     }
     try:
-        return subprocess.call(["bash", str(INGEST / name), *args], env=env)
+        return subprocess.run(
+            ["bash", str(INGEST / name), *args], env=env, check=False, timeout=INGEST_TIMEOUT
+        ).returncode
+    except subprocess.TimeoutExpired:
+        print(f"{name} did not finish within {INGEST_TIMEOUT // 3600} hours", file=sys.stderr)
+        return 124
     except KeyboardInterrupt:
         return 130
 

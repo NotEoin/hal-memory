@@ -16,6 +16,8 @@ from .config import shared, vault
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS = ROOT / "claude-commands"
+OLLAMA_LIST_TIMEOUT = 30  # seconds; `ollama list` answers at once when the server is up
+OLLAMA_PULL_TIMEOUT = 3600  # seconds; an embedding model is under 1 GB
 APT = {
     "pdftotext": "poppler-utils",
     "pdftoppm": "poppler-utils",
@@ -144,7 +146,21 @@ def embed_model(check: bool) -> int:
         say("todo", f"install Ollama (https://ollama.com), then: ollama pull {model}")
         return 1
     env = {**os.environ, "OLLAMA_HOST": shared()["ollama_url"]}
-    r = subprocess.run(["ollama", "list"], capture_output=True, text=True, env=env)
+    try:
+        r = subprocess.run(
+            ["ollama", "list"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+            timeout=OLLAMA_LIST_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        say(
+            "todo",
+            f"Ollama did not answer in {OLLAMA_LIST_TIMEOUT}s; start it, then: ollama pull {model}",
+        )
+        return 1
     if r.returncode != 0:
         say("todo", f"start Ollama (ollama serve), then: ollama pull {model}")
         return 1
@@ -156,7 +172,13 @@ def embed_model(check: bool) -> int:
         say("todo", f"ollama pull {model}")
         return 1
     say("pull", model)
-    if subprocess.run(["ollama", "pull", model], env=env).returncode != 0:
+    try:
+        pulled = subprocess.run(
+            ["ollama", "pull", model], env=env, check=False, timeout=OLLAMA_PULL_TIMEOUT
+        ).returncode
+    except subprocess.TimeoutExpired:
+        pulled = 1
+    if pulled != 0:
         say("warn", f"could not pull {model}; search falls back to keywords until it is")
         return 1
     return 0

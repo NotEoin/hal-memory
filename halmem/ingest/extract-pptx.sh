@@ -16,7 +16,9 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # The vault is [hal].vault in ~/.config/hal/config.toml; HAL_VAULT overrides it for one run.
-VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." python3 -c 'from halmem.config import vault; print(vault())')}"
+# Every external tool call below runs under `timeout`, so one corrupt file cannot hang a batch.
+TOOL_TIMEOUT="${HAL_TOOL_TIMEOUT:-120}"  # seconds
+VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." timeout "$TOOL_TIMEOUT" python3 -c 'from halmem.config import vault; print(vault())')}"
 
 c_blue=$'\033[1;36m'; c_yellow=$'\033[1;33m'; c_green=$'\033[1;32m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
 log()  { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }
@@ -53,10 +55,10 @@ extract_text() {  # $1=pptx  $2=out.txt  -> echoes char count
   : > "$out"   # ensure the output file exists even if every extractor yields nothing
   # NOTE: pandoc cannot READ .pptx, so this falls through to the python-pptx extractor below.
   if have pandoc; then
-    pandoc -s "$pptx" -t plain -o "$out" 2>/dev/null || :
+    timeout "$TOOL_TIMEOUT" pandoc -s "$pptx" -t plain -o "$out" 2>/dev/null || :
   fi
   if [ ! -s "$out" ] && have python3; then
-    python3 - "$pptx" "$out" <<'PY' 2>/dev/null || :
+    timeout "$TOOL_TIMEOUT" python3 - "$pptx" "$out" <<'PY' 2>/dev/null || :
 import sys
 from pptx import Presentation
 
@@ -149,7 +151,7 @@ while IFS= read -r -d '' pptx; do
   pages="?"
   # PPTX doesn't have a direct equivalent to pdfinfo, so we'll use a fallback approach
   if have python3; then
-    pages="$(python3 -c "
+    pages="$(timeout "$TOOL_TIMEOUT" python3 -c "
 import sys
 from pptx import Presentation
 try:

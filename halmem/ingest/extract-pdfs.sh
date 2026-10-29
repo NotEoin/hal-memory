@@ -16,7 +16,9 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # The vault is [hal].vault in ~/.config/hal/config.toml; HAL_VAULT overrides it for one run.
-VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." python3 -c 'from halmem.config import vault; print(vault())')}"
+# Every external tool call below runs under `timeout`, so one corrupt file cannot hang a batch.
+TOOL_TIMEOUT="${HAL_TOOL_TIMEOUT:-120}"  # seconds
+VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." timeout "$TOOL_TIMEOUT" python3 -c 'from halmem.config import vault; print(vault())')}"
 
 c_blue=$'\033[1;36m'; c_yellow=$'\033[1;33m'; c_green=$'\033[1;32m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
 log()  { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }
@@ -42,7 +44,7 @@ CACHE="$VAULT/_Import-Staging/.pdf-text"
 REPORT="$VAULT/_Import-Staging/SLIDES-REPORT.md"
 mkdir -p "$CACHE" "$VAULT/_Import-Staging"
 
-if ! have pdftotext && ! python3 -c 'import fitz' >/dev/null 2>&1; then
+if ! have pdftotext && ! timeout "$TOOL_TIMEOUT" python3 -c 'import fitz' >/dev/null 2>&1; then
   err "No PDF extractor found. Install poppler-utils (pdftotext) or pymupdf, see: hal-memory setup --check"
   exit 1
 fi
@@ -52,10 +54,10 @@ extract_text() {  # $1=pdf  $2=out.txt  -> echoes char count
   local pdf="$1" out="$2"
   : > "$out"   # ensure the output file exists even if every extractor yields nothing
   if have pdftotext; then
-    pdftotext -layout "$pdf" "$out" 2>/dev/null || :
+    timeout "$TOOL_TIMEOUT" pdftotext -layout "$pdf" "$out" 2>/dev/null || :
   fi
-  if [ ! -s "$out" ] && python3 -c 'import fitz' >/dev/null 2>&1; then
-    python3 - "$pdf" "$out" <<'PY' 2>/dev/null || :
+  if [ ! -s "$out" ] && timeout "$TOOL_TIMEOUT" python3 -c 'import fitz' >/dev/null 2>&1; then
+    timeout "$TOOL_TIMEOUT" python3 - "$pdf" "$out" <<'PY' 2>/dev/null || :
 import sys, fitz
 doc = fitz.open(sys.argv[1])
 open(sys.argv[2], "w").write("\n".join(p.get_text() for p in doc))
@@ -68,11 +70,11 @@ ocr_pdf() {  # $1=pdf  $2=out.txt  -> echoes char count
   local pdf="$1" out="$2" tmpd
   if ! have tesseract || ! have pdftoppm; then echo 0; return; fi
   tmpd="$(mktemp -d)"
-  pdftoppm -r 150 -png "$pdf" "$tmpd/p" >/dev/null 2>&1
+  timeout "$TOOL_TIMEOUT" pdftoppm -r 150 -png "$pdf" "$tmpd/p" >/dev/null 2>&1
   : > "$out"
   for img in "$tmpd"/p*.png; do
     [ -e "$img" ] || continue
-    tesseract "$img" stdout 2>/dev/null >> "$out"
+    timeout "$TOOL_TIMEOUT" tesseract "$img" stdout 2>/dev/null >> "$out"
   done
   rm -rf "$tmpd"
   wc -m < "$out" 2>/dev/null | tr -d ' ' || echo 0
@@ -137,7 +139,7 @@ while IFS= read -r -d '' pdf; do
   if [ "$textstatus" = "text" ] || [ "$textstatus" = "ocr" ]; then EXTRACTED=$((EXTRACTED+1)); fi
 
   pages="?"
-  if have pdfinfo; then pages="$(pdfinfo "$pdf" 2>/dev/null | awk '/^Pages:/{print $2}')"; fi
+  if have pdfinfo; then pages="$(timeout "$TOOL_TIMEOUT" pdfinfo "$pdf" 2>/dev/null | awk '/^Pages:/{print $2}')"; fi
 
   sumres="$(find_summary "$pdf")"
   sumstatus="${sumres%%|*}"; sumcand="${sumres#*|}"
