@@ -252,6 +252,23 @@ class BriefTest(Base):
         self.assertEqual((again["due"], again["open"]), (1, 1))
         self.assertEqual(note.read_text().count(brief.START), 1)
 
+    def test_brief_replaces_legacy_header_section(self):
+        from halmem import brief
+
+        legacy = (
+            "# 10 Oct\n\n"
+            + brief.START
+            + "\n## \u2600\ufe0f Morning Brief\nold text\n"
+            + brief.END
+            + "\n\nKept below.\n"
+        )
+        out = brief.insert(legacy, "new text")
+        self.assertEqual(out.count(brief.START), 1)
+        self.assertNotIn("\u2600", out)
+        self.assertNotIn("old text", out)
+        self.assertIn("new text", out)
+        self.assertIn("Kept below.", out)
+
     def test_brief_print_only_leaves_the_vault_alone(self):
         r = self.run_cli("brief", "--no-llm", "--print-only", "--date", "2026-10-10")
         self.assertEqual(r.returncode, 0, r.stderr)

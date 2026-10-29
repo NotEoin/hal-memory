@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 #
-# extract-docx.sh — pull text out of lecture documents DOCXs so the local (text-only) model
+# extract-docx.sh -- pull text out of lecture documents DOCXs so the local (text-only) model
 # can summarise them, and report which docs DON'T already have a summary note.
 #
 # It writes one .txt per DOCX into a cache, plus SLIDES-REPORT.md. It does NOT summarise or
-# move anything — that's the /summarize-slides skill. Re-runnable (skips already-extracted).
+# move anything -- that's the /summarize-slides skill. Re-runnable (skips already-extracted).
 #
 # Usage:
 #   hal-memory import extract docx                  # scan everything under _Import-Staging/
@@ -20,9 +20,9 @@ VAULT="${HAL_VAULT:-$(PYTHONPATH="$HERE/.." python3 -c 'from halmem.config impor
 
 c_blue=$'\033[1;36m'; c_yellow=$'\033[1;33m'; c_green=$'\033[1;32m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
 log()  { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }
-ok()   { printf '%s  ✓ %s%s\n' "$c_green" "$*" "$c_off"; }
+ok()   { printf '%s  [ok] %s%s\n' "$c_green" "$*" "$c_off"; }
 warn() { printf '%s  ! %s%s\n' "$c_yellow" "$*" "$c_off"; }
-err()  { printf '%s  ✗ %s%s\n' "$c_red" "$*" "$c_off"; }
+err()  { printf '%s  [fail] %s%s\n' "$c_red" "$*" "$c_off"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # ---- Args -------------------------------------------------------------------
@@ -43,10 +43,10 @@ REPORT="$VAULT/_Import-Staging/SLIDES-REPORT.md"
 mkdir -p "$CACHE" "$VAULT/_Import-Staging"
 
 if ! have pandoc && ! have python3; then
-  err "No DOCX extractor found. Install pandoc or python3 with python-docx — see: hal-memory setup --check"
+  err "No DOCX extractor found. Install pandoc or python3 with python-docx, see: hal-memory setup --check"
   exit 1
 fi
-MIN_CHARS=30   # below this, extraction got essentially nothing → image-only / needs OCR
+MIN_CHARS=30   # below this, extraction got essentially nothing -> image-only / needs OCR
 
 extract_text() {  # $1=docx  $2=out.txt  -> echoes char count
   local docx="$1" out="$2"
@@ -161,9 +161,9 @@ except:
   sumres="$(find_summary "$docx")"
   sumstatus="${sumres%%|*}"; sumcand="${sumres#*|}"
   case "$sumstatus" in
-    yes)   HAS_SUMMARY=$((HAS_SUMMARY+1)); sumcell="✅ $sumcand" ;;
-    maybe) sumcell="🟡 maybe: $sumcand" ;;
-    none)  GAP=$((GAP+1)); sumcell="❌ none — needs summary" ;;
+    yes)   HAS_SUMMARY=$((HAS_SUMMARY+1)); sumcell="yes: $sumcand" ;;
+    maybe) sumcell="maybe: $sumcand" ;;
+    none)  GAP=$((GAP+1)); sumcell="none - needs summary" ;;
   esac
 
   printf '| %s | %s | %s | %s | %s | `%s` |\n' \
@@ -194,5 +194,5 @@ ${c_green}Document extraction complete.${c_off}
   ${c_yellow}Gaps to summarise:      $GAP${c_off}
 
 Report: ${REPORT#$VAULT/} (open it in Obsidian)
-Next:   hal  →  /summarize-slides
+Next:   hal  ->  /summarize-slides
 EOF

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# register-repos.sh — add your coding projects to the second brain as a *linked layer*.
+# register-repos.sh -- add your coding projects to the second brain as a *linked layer*.
 #
 # It scans folders for git repos (or registers a single repo / a GitHub-only URL) and writes
 # one lightweight "hub note" per repo into Vault/Areas/Code/. The code itself is NEVER copied
-# and file *contents* are never read — only safe git metadata + a file-extension tally are
+# and file *contents* are never read -- only safe git metadata + a file-extension tally are
 # used, and any credentials embedded in a remote URL are stripped. The smart part (reading
-# READMEs, wiring per-repo CLAUDE.md memory) is the `/index-repos` skill — run that after.
+# READMEs, wiring per-repo CLAUDE.md memory) is the `/index-repos` skill -- run that after.
 #
 # Usage:
 #   hal-memory register-repos ~/code ~/projects    # scan these parent folders for git repos
@@ -14,7 +14,7 @@
 #   hal-memory register-repos --github URL [Name]  # add a GitHub-only repo as a card
 #   hal-memory register-repos --depth 4 ~/code     # how deep to look for .git (default 4)
 #   hal-memory register-repos --refresh ~/code     # update git metadata on existing notes
-#   hal-memory register-repos                      # scan common dev folders (~/code, ~/dev, …)
+#   hal-memory register-repos                      # scan common dev folders (~/code, ~/dev, ...)
 #
 # Re-runnable: existing notes are skipped (use --refresh to update their metadata only;
 # your edits and the /index-repos summary in the note body are preserved).
@@ -29,12 +29,12 @@ REPORT="$CODE/CODE-REPORT.md"
 
 c_blue=$'\033[1;36m'; c_yellow=$'\033[1;33m'; c_green=$'\033[1;32m'; c_red=$'\033[1;31m'; c_off=$'\033[0m'
 log()  { printf '\n%s==> %s%s\n' "$c_blue" "$*" "$c_off"; }
-ok()   { printf '%s  ✓ %s%s\n' "$c_green" "$*" "$c_off"; }
+ok()   { printf '%s  [ok] %s%s\n' "$c_green" "$*" "$c_off"; }
 warn() { printf '%s  ! %s%s\n' "$c_yellow" "$*" "$c_off"; }
-err()  { printf '%s  ✗ %s%s\n' "$c_red" "$*" "$c_off"; }
+err()  { printf '%s  [fail] %s%s\n' "$c_red" "$*" "$c_off"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
-if ! have git; then err "git is not installed — needed to read repo metadata."; exit 1; fi
+if ! have git; then err "git is not installed, needed to read repo metadata."; exit 1; fi
 mkdir -p "$CODE"
 
 # ---- Args -------------------------------------------------------------------
@@ -59,7 +59,7 @@ if [ ${#SCAN_PATHS[@]} -eq 0 ] && [ -z "$GH_URL" ]; then
     [ -d "$d" ] && SCAN_PATHS+=( "$d" )
   done
   [ ${#SCAN_PATHS[@]} -eq 0 ] && { err "No paths given and no common dev folder found. Try: hal-memory register-repos ~/your/code"; exit 1; }
-  warn "No paths given — scanning defaults: ${SCAN_PATHS[*]}"
+  warn "No paths given, scanning defaults: ${SCAN_PATHS[*]}"
 fi
 
 # ---- Helpers ----------------------------------------------------------------
@@ -207,8 +207,8 @@ write_local_note() { # $1=repo abs path
     echo
     echo "# $name"
     echo
-    echo "**Language:** $lang   ·   **Where:** \`$repo\`${remote:+   ·   [$remote]($remote)}"
-    echo "**Branch:** \`$branch\`   ·   **Last commit:** ${last_commit:-unknown}"
+    echo "**Language:** $lang   -   **Where:** \`$repo\`${remote:+   -   [$remote]($remote)}"
+    echo "**Branch:** \`$branch\`   -   **Last commit:** ${last_commit:-unknown}"
     echo
     echo "## What it is"
     echo "<!-- /index-repos fills this from the README. -->"
@@ -231,7 +231,7 @@ write_local_note() { # $1=repo abs path
     echo "## Deep memory"
     echo "> Open the repo (\`hal here\`) and run \`/init\` once to generate a code-aware"
     echo "> \`CLAUDE.md\` inside it. \`/index-repos\` can do this for you."
-    if [ -f "$repo/CLAUDE.md" ]; then echo ">"; echo "> ✅ This repo already has a \`CLAUDE.md\`."; fi
+    if [ -f "$repo/CLAUDE.md" ]; then echo ">"; echo "> This repo already has a \`CLAUDE.md\`."; fi
     echo
     echo "## Recent Sessions"
     echo '```dataview'
@@ -256,7 +256,7 @@ write_github_note() { # $1=url  $2=name(optional)
   today="$(date +%F)"
 
   local hit; hit="$(existing_note_for repo "$url")"
-  if [ -n "$hit" ] && [ "$REFRESH" -eq 0 ]; then R_SKIP=$((R_SKIP+1)); REG_ROWS+=( "$name|—|github|?|?|—" ); return; fi
+  if [ -n "$hit" ] && [ "$REFRESH" -eq 0 ]; then R_SKIP=$((R_SKIP+1)); REG_ROWS+=( "$name|-|github|?|?|-" ); return; fi
 
   note="$CODE/$name.md"
   [ -e "$note" ] && note="$CODE/$name-github.md"
@@ -277,7 +277,7 @@ write_github_note() { # $1=url  $2=name(optional)
     echo
     echo "# $name"
     echo
-    echo "**Remote:** [$url]($url)   ·   _Not cloned locally._"
+    echo "**Remote:** [$url]($url)   -   _Not cloned locally._"
     echo
     echo "## What it is"
     echo "<!-- Fill in, or clone it locally then re-run hal-memory register-repos to auto-detect. -->"
@@ -287,7 +287,7 @@ write_github_note() { # $1=url  $2=name(optional)
   } > "$note"
   ok "registered (GitHub card): ${note#$VAULT/}"
   R_NEW=$((R_NEW+1))
-  REG_ROWS+=( "$name|—|github|?|?|—" )
+  REG_ROWS+=( "$name|-|github|?|?|-" )
 }
 
 # ---- Run --------------------------------------------------------------------
@@ -310,7 +310,7 @@ for base in "${SCAN_PATHS[@]:-}"; do
     continue
   fi
 
-  log "Scanning for git repos under: ${base/#$HOME/~}  (depth ≤ $DEPTH)"
+  log "Scanning for git repos under: ${base/#$HOME/~}  (depth <= $DEPTH)"
   while IFS= read -r -d '' gitdir; do
     repo="$(dirname "$gitdir")"
     [ -n "${SEEN[$repo]:-}" ] && continue
@@ -331,7 +331,7 @@ done
   echo
   echo "> Generated by \`register-repos.sh\` on $(date '+%Y-%m-%d %H:%M')."
   echo "> Hub notes live in \`Areas/Code/\`; the dashboard is \`Areas/Code/_Index.md\`."
-  echo "> Run \`hal\` → \`/index-repos\` to fill summaries from READMEs and wire up per-repo memory."
+  echo "> Run \`hal\` -> \`/index-repos\` to fill summaries from READMEs and wire up per-repo memory."
   echo
   echo "| Repo | Language | Where | README | CLAUDE.md | Last commit |"
   echo "|---|---|---|---|---|---|"
@@ -347,7 +347,7 @@ done
   echo "- Already present (skipped): **$R_SKIP**"
   [ "$R_REFRESH" -gt 0 ] && echo "- Metadata refreshed: **$R_REFRESH**"
   echo
-  echo "Next: \`hal\` → \`/index-repos\` (summaries + \`/init\` per-repo memory + session-log mirroring)."
+  echo "Next: \`hal\` -> \`/index-repos\` (summaries + \`/init\` per-repo memory + session-log mirroring)."
 } > "$REPORT"
 
 cat <<EOF
@@ -357,6 +357,6 @@ ${c_green}Repo registration complete.${c_off}
   Skipped (exist):  $R_SKIP
   Refreshed:        $R_REFRESH
 
-Hub notes: Vault/Areas/Code/   ·   Report: Areas/Code/CODE-REPORT.md
-Next:      hal  →  /index-repos
+Hub notes: Vault/Areas/Code/   -   Report: Areas/Code/CODE-REPORT.md
+Next:      hal  ->  /index-repos
 EOF

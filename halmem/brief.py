@@ -24,7 +24,9 @@ SYSTEM = (
     "tight sections with small headings. Keep [[wiki links]] and `- [ ]` checkboxes exactly as "
     "given. Leave out empty sections. Clean Markdown, no preamble, no sign-off."
 )
-HEADER = "## ☀️ Morning Brief"
+# Blocks written before 0.1.0 start with "## \u2600\ufe0f Morning Brief"; BLOCK replaces them
+# by their markers, so the heading text never has to match.
+HEADER = "## Morning Brief"
 START = "<!-- HAL-BRIEF:START -->"
 END = "<!-- HAL-BRIEF:END -->"
 TASK = re.compile(r"^\s*[-*]\s+\[([ xX])\]\s+(.*)$")
@@ -184,7 +186,7 @@ def packet(root: Path, day: date) -> tuple[str, dict]:
         out.append("(no daily note for yesterday, or it was empty)")
     out += ["", "## Projects & last session"]
     out += [
-        f"- [[{p['name']}]] — active" + (f" (since {p['date']})" if p["date"] else "")
+        f"- [[{p['name']}]], active" + (f" (since {p['date']})" if p["date"] else "")
         for p in active
     ] or ["(no active projects)"]
     if last:
@@ -194,10 +196,10 @@ def packet(root: Path, day: date) -> tuple[str, dict]:
     out += ["", "## Concept of the day"]
     if topic:
         out.append(
-            f"[[{topic['name']}]] — linked from {topic['inlinks']} notes; still a stub worth a "
+            f"[[{topic['name']}]], linked from {topic['inlinks']} notes; still a stub worth a "
             "5-minute review or expand."
         )
-        out.append("Appears in: " + (", ".join(f"[[{e}]]" for e in topic["examples"]) or "—"))
+        out.append("Appears in: " + (", ".join(f"[[{e}]]" for e in topic["examples"]) or "-"))
     else:
         out.append("(no topic graph yet)")
     return "\n".join(out), {
@@ -211,7 +213,7 @@ def packet(root: Path, day: date) -> tuple[str, dict]:
 def plain(facts: str, day: date) -> str:
     """Returns the brief without a model: the packet under a greeting."""
     return (
-        f"Good morning — here's {day:%A %d %B}.\n\n"
+        f"Good morning, here's {day:%A %d %B}.\n\n"
         + re.sub(r"^# Brief packet.*\n", "", facts).strip()
     )
 

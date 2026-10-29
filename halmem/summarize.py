@@ -6,14 +6,14 @@ a self-contained study note, and files it under
 `Areas/Study/<Year>/<Course>/<Title>.md`.
 
 What makes the notes useful (not a transcript, not a shallow blurb):
-  * Each note is **self-contained study notes** — a short Summary up top, then the
+  * Each note is **self-contained study notes**, a short Summary up top, then the
     slide content *condensed into concise, interpretable notes* you can revise from
     without opening the original deck. The source is LINKED at the bottom, never
     pasted in.
-  * Notes are organised **by year → module → section**, derived from the file's real
+  * Notes are organised **by year -> module -> section**, derived from the file's real
     Canvas path and `Course structure.md` (not the "Linked materials" folder it sat in).
-  * Every note carries a breadcrumb that wikilinks the whole spine —
-    [[University]] › [[<Year> Index]] › [[<CODE> Index]] › [[<CODE> Index#<Section>]] —
+  * Every note carries a breadcrumb that wikilinks the whole spine,
+    [[University]] > [[<Year> Index]] > [[<CODE> Index]] > [[<CODE> Index#<Section>]],
     and every reusable concept it mentions is linked inline as [[Topic]], with a matching
     stub auto-created under `Areas/Study/Topics/`. The module index (grouped by section in
     teaching order), the year hub, and the root MOC are rebuilt as it goes, so Obsidian's
@@ -21,7 +21,7 @@ What makes the notes useful (not a transcript, not a shallow blurb):
     [memory].university in the config (HAL_UNIVERSITY overrides it).
 
 Why this is the right tool for hundreds/thousands of files:
-  * Each deck is summarised in its OWN fresh model call — the 32K context window
+  * Each deck is summarised in its OWN fresh model call, the 32K context window
     never fills up, so there's no auto-compaction and no drift.
   * Every finished note is written to disk immediately, and decks that already
     have a note are skipped. So the run is fully RESUMABLE: stop it whenever,
@@ -58,6 +58,13 @@ from . import llm
 from .config import settings
 from .config import vault as config_vault
 
+# SLIDES-REPORT.md rows written before 0.1.0 use emoji (a red cross, a yellow circle) in the
+# summary column; reports from the current scripts use the plain-text markers.
+GAP_MARKS = ("\u274c", "none - needs summary")
+MAYBE_MARKS = ("\U0001f7e1", "maybe:")
+# Course folders are exported as "Name \u2013 CODE" with an en dash.
+COURSE_CODE_SUFFIX = "\\s*[-\u2013]\\s*[A-Z]{2,4}\\d{3,4}\\s*$"
+
 # ---- Hal's terminal voice ---------------------------------------------------
 BLUE = "\033[1;36m"
 YELLOW = "\033[1;33m"
@@ -72,7 +79,7 @@ def hal(msg):
 
 
 def ok(msg):
-    print(f"{GREEN}  ✓ {msg}{OFF}", flush=True)
+    print(f"{GREEN}  [ok] {msg}{OFF}", flush=True)
 
 
 def tick(msg):
@@ -84,14 +91,14 @@ def warn(msg):
 
 
 def err(msg):
-    print(f"{RED}  ✗ {msg}{OFF}", flush=True)
+    print(f"{RED}  [fail] {msg}{OFF}", flush=True)
 
 
 HAL_SYSTEM = (
     "You are Hal, a concise, private study assistant running locally on the user's machine. "
     "You turn raw lecture material into self-contained study notes: a short summary, then the "
     "ideas condensed into clear, interpretable notes a student can revise from WITHOUT the "
-    "original slides. You explain ideas in your own words — never a slide-by-slide transcript, "
+    "original slides. You explain ideas in your own words, never a slide-by-slide transcript, "
     "and never a vague high-level blurb. Write clean Markdown. Stay grounded: if the source is "
     "thin, keep the note short rather than padding, and never invent facts the text doesn't support.\n\n"
     "The notes live in an Obsidian vault, so LINKING IS ESSENTIAL. Whenever you name a real, "
@@ -100,7 +107,7 @@ HAL_SYSTEM = (
     "in [[wiki link]] brackets the FIRST time it appears in the note, using its plain canonical "
     "name (e.g. [[Dynamic programming]], not [[dynamic programming algorithms we saw]]). This lets "
     "the whole degree wire itself together by topic. Do NOT link ordinary words, the course name, "
-    "or generic phrases — only genuine, page-worthy concepts. Link each concept once, not every time."
+    "or generic phrases, only genuine, page-worthy concepts. Link each concept once, not every time."
 )
 
 # Set by the SIGINT handler so we stop cleanly between decks (not mid-note).
@@ -111,7 +118,7 @@ def _on_sigint(signum, frame):
     global STOP
     STOP = True
     print()
-    warn("Caught Ctrl-C — I'll stop after this deck. Everything finished is already saved.")
+    warn("Caught Ctrl-C, I'll stop after this deck. Everything finished is already saved.")
 
 
 # ---- Talking to the local model ---------------------------------------------
@@ -136,11 +143,11 @@ def summarise_text(title, course, role, text, model, mock=False):
     if mock:
         return (
             f"## Summary\nConcise study notes for **{title}** ({course}). "
-            "(--mock: no model was called — this is placeholder structure.)\n\n"
+            "(--mock: no model was called, this is placeholder structure.)\n\n"
             "## Notes\n- The slide content, condensed into interpretable points in Hal's words, "
             "touching on [[Example Concept]] and [[Another Topic]].\n"
             "  - Sub-points expand on each idea so it's revisable without the deck.\n\n"
-            "## Key terms & formulas\n- **[[Example Concept]]** — a short, grounded definition.\n\n"
+            "## Key terms & formulas\n- **[[Example Concept]]** - a short, grounded definition.\n\n"
             "## Takeaways\n- A few revision-ready bullets.\n"
             "- Re-run without --mock for the real note."
         )
@@ -149,7 +156,7 @@ def summarise_text(title, course, role, text, model, mock=False):
     if len(chunks) > 1:
         partials = []
         for i, ch in enumerate(chunks, 1):
-            tick(f"{DIM}· reading part {i}/{len(chunks)}…{OFF}")
+            tick(f"{DIM}- reading part {i}/{len(chunks)}...{OFF}")
             partials.append(
                 call_model(
                     [
@@ -194,7 +201,7 @@ def note_prompt(title, course, role, text):
     }.get(
         role,
         (
-            "These are lecture slides. Condense them into clear, interpretable study notes — "
+            "These are lecture slides. Condense them into clear, interpretable study notes, "
             "explain the ideas in your own words, don't transcribe the slides."
         ),
     )
@@ -202,16 +209,16 @@ def note_prompt(title, course, role, text):
         f'Source material titled "{title}" from the course "{course}". {role_hint}\n\n'
         "Write a self-contained revision note in Markdown (no YAML front matter, no surrounding "
         "code fences) with these sections, in this order:\n\n"
-        "## Summary\n2–4 sentences: what this covers and why it matters.\n\n"
+        "## Summary\n2 to 4 sentences: what this covers and why it matters.\n\n"
         "## Notes\nThe actual content, condensed into concise, interpretable notes a student can "
         "revise from WITHOUT the original slides. Use short bullets and sub-bullets; explain each "
         "idea in your own words; keep a worked example only where it genuinely aids understanding. "
         "Do NOT transcribe slide-by-slide and do NOT pad. Wrap each genuine, reusable concept in "
         "[[wiki links]] the first time it appears (see the linking rule above).\n\n"
         "## Key terms & formulas\nDefinitions and formulas that appear in the source, each as "
-        "`**term** — meaning`. Wrap the term in [[wiki links]] when it is a reusable concept. "
+        "`**term** - meaning`. Wrap the term in [[wiki links]] when it is a reusable concept. "
         "Omit this heading entirely if there are none.\n\n"
-        "## Takeaways\n3–6 bullets worth remembering for revision.\n\n"
+        "## Takeaways\n3 to 6 bullets worth remembering for revision.\n\n"
         "Ground everything in the source text below; never invent facts it doesn't support. If the "
         "source is thin, write a short note rather than padding it out.\n\n"
         f'Source text:\n"""\n{text}\n"""'
@@ -235,7 +242,7 @@ def chunk_text(text, size):
     return out
 
 
-# ---- Path → Year / Course / Code / Role -------------------------------------
+# ---- Path -> Year / Course / Code / Role -------------------------------------
 _NAV_FOLDERS = {"linked materials", "pages", "slides", "files", "resources", "attachments"}
 
 
@@ -268,7 +275,7 @@ def course_code(course):
 
 
 def clean_course_name(course):
-    name = re.sub(r"\s*[-–]\s*[A-Z]{2,4}\d{3,4}\s*$", "", course).strip()
+    name = re.sub(COURSE_CODE_SUFFIX, "", course).strip()
     return name or course
 
 
@@ -325,13 +332,13 @@ def index_link(code, cname):
     return f"{code} Index" if code else f"{cname} Index"
 
 
-# Root of the whole course hierarchy: University → Year → Module → Section → Note.
+# Root of the whole course hierarchy: University -> Year -> Module -> Section -> Note.
 # Set [memory].university in the config (or HAL_UNIVERSITY) to your own institution; it
 # names the root MOC and the first hop of every breadcrumb.
 UNIVERSITY = os.environ.get("HAL_UNIVERSITY") or settings()["university"]
 
 
-# ---- Inline topic links → auto-created stub topic notes ----------------------
+# ---- Inline topic links -> auto-created stub topic notes ----------------------
 # Wikilinks that are part of the navigation spine, not real concepts. We never
 # turn these into "topic" stubs.
 def _is_structural_link(target):
@@ -368,7 +375,7 @@ def ensure_topic_stub(vault, name):
 
     Stubs make every inline [[concept]] resolve, so Obsidian's graph + backlinks
     panel surface everywhere the concept is used across the whole degree. The
-    stub is intentionally tiny — Hal (or the user) can flesh it out later, and
+    stub is intentionally tiny, Hal (or the user) can flesh it out later, and
     the backlinks do the heavy lifting for traversal.
     """
     title = _topic_title(name)
@@ -400,7 +407,7 @@ def ensure_topic_stub(vault, name):
                 "",
                 "## Notes",
                 "",
-                "_(empty — Hal or you can flesh this out; the links already work.)_",
+                "_(empty, Hal or you can flesh this out; the links already work.)_",
                 "",
                 "## Appears in",
                 "",
@@ -556,20 +563,20 @@ def write_note(vault, row, scan_dir, body):
         "",
         f"# {title}",
     ]
-    # Breadcrumb: University › Year › Module › Section — every hop a wikilink, so
+    # Breadcrumb: University > Year > Module > Section -- every hop a wikilink, so
     # the whole degree is traversable from any note.
-    crumb = f"*[[{UNIVERSITY}]] › [[{year} Index|{year}]] › [[{idx}|{cname}]]"
+    crumb = f"*[[{UNIVERSITY}]] > [[{year} Index|{year}]] > [[{idx}|{cname}]]"
     if section:
-        crumb += f" › [[{idx}#{section_anchor(section)}|{section}]]"
-    crumb += f" · {role}*"
+        crumb += f" > [[{idx}#{section_anchor(section)}|{section}]]"
+    crumb += f" - {role}*"
     fm += [crumb, ""]
 
     footer = f"\n\n---\n*Part of [[{idx}|{cname}]]"
     if section:
-        footer += f" · [[{idx}#{section_anchor(section)}|{section}]]"
+        footer += f" - [[{idx}#{section_anchor(section)}|{section}]]"
     footer += "*"
     if in_vault_src:
-        footer += f"  ·  **Source:** [[{src_name}]]"
+        footer += f"  -  **Source:** [[{src_name}]]"
     footer += "\n"
     note_path.write_text("\n".join(fm) + body.strip() + footer, encoding="utf-8")
 
@@ -589,9 +596,9 @@ def parse_course_map(scan_dir, year, course_folder):
     """Parse the Canvas `Course structure.md` into section info.
 
     Returns dict with:
-      order   — ordered list of section names (the `## ...` headings)
-      members — { normalised file/page name : section name }
-    Sections give us the year→module→SECTION dimension the user wants, in the
+      order   - ordered list of section names (the `## ...` headings)
+      members - { normalised file/page name : section name }
+    Sections give us the year->module->SECTION dimension the user wants, in the
     real Canvas teaching order, mapping each deck/page to where it belongs.
     """
     empty = {"order": [], "members": {}}
@@ -627,7 +634,7 @@ def section_for(course_map, filename):
     if key in members:
         return members[key]
     # Containment either way (Canvas often references a deck by a shortened name).
-    # Require a long shared stem so we don't false-match on a short common word —
+    # Require a long shared stem so we don't false-match on a short common word -
     # prefer the longest such member so the most specific reference wins.
     best = ("", "")
     for mkey, sect in members.items():
@@ -698,9 +705,9 @@ def build_course_index(vault, year, course_folder, scan_dir):
         f"tags: [index, study, {code.lower() if code else course_slug(course_folder)}]",
         "---",
         "",
-        f"# {cname}" + (f" ({code})" if code else "") + " — Index",
+        f"# {cname}" + (f" ({code})" if code else "") + " - Index",
         "",
-        f"*[[{UNIVERSITY}]] › [[{year} Index|{year}]]*",
+        f"*[[{UNIVERSITY}]] > [[{year} Index|{year}]]*",
         "",
         f"**{total}** note(s) filed in this module.",
         "",
@@ -728,7 +735,7 @@ def build_course_index(vault, year, course_folder, scan_dir):
             lines += [""]
 
     if total == 0:
-        lines += ["_No notes yet — run `hal summarize` to populate this course._", ""]
+        lines += ["_No notes yet, run `hal summarize` to populate this course._", ""]
 
     idx_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
     return idx_path
@@ -753,9 +760,9 @@ def build_year_index(vault, year):
         "tags: [index, study, year]",
         "---",
         "",
-        f"# {year} — Courses",
+        f"# {year} - Courses",
         "",
-        f"*[[{UNIVERSITY}]] · [[_Index|Study]]*",
+        f"*[[{UNIVERSITY}]] - [[_Index|Study]]*",
         "",
     ]
     for link, cname, code in courses:
@@ -770,8 +777,8 @@ def build_year_index(vault, year):
 def build_university_index(vault):
     """(Re)generate the root MOC that ties every academic year together.
 
-    This is the top of the spine: the institution named by HAL_UNIVERSITY → each
-    Year Index → each Module Index → Section → Note. Linking up to it from the year
+    This is the top of the spine: the institution named by HAL_UNIVERSITY -> each
+    Year Index -> each Module Index -> Section -> Note. Linking up to it from the year
     hubs makes the whole degree one connected graph.
     """
     study = vault / "Areas" / "Study"
@@ -792,7 +799,7 @@ def build_university_index(vault):
         "",
         f"# {UNIVERSITY}",
         "",
-        "*Root of the study hierarchy: University › Academic year › Module › Section › Note.*",
+        "*Root of the study hierarchy: University > Academic year > Module > Section > Note.*",
         "",
         "## Academic years",
         "",
@@ -800,7 +807,7 @@ def build_university_index(vault):
     for y in years:
         lines.append(f"- [[{y} Index|{y}]]")
     if not years:
-        lines.append("_No years yet — run `hal summarize` to populate._")
+        lines.append("_No years yet, run `hal summarize` to populate._")
     lines += [
         "",
         "## All modules",
@@ -911,10 +918,10 @@ def main(argv=None):
     queue = []
     unreadable = 0
     for r in rows:
-        is_gap = "❌" in r["summary"]
-        is_maybe = "🟡" in r["summary"]
+        is_gap = any(mark in r["summary"] for mark in GAP_MARKS)
+        is_maybe = any(mark in r["summary"] for mark in MAYBE_MARKS)
         # A "maybe" that only points at the structure/report files isn't a real
-        # human summary — treat it as a gap.
+        # human summary -- treat it as a gap.
         false_maybe = is_maybe and (
             "Course structure.md" in r["summary"] or "SLIDES-REPORT.md" in r["summary"]
         )
@@ -960,12 +967,12 @@ def main(argv=None):
     hal("Hal here. Let me pick up the slide summaries.")
     touched_courses = sorted({clean_course_name(r["course_folder"]) for r in todo})
     if not todo:
-        ok("Nothing outstanding — every readable deck already has a note.")
+        ok("Nothing outstanding, every readable deck already has a note.")
         if deduped:
             tick(f"{DIM}({deduped} handout duplicate(s) skipped.){OFF}")
         if unreadable:
             warn(
-                f"({unreadable} deck(s) are image-only — re-run hal-memory import prepare --ocr to read them.)"
+                f"({unreadable} deck(s) are image-only, re-run hal-memory import prepare --ocr to read them.)"
             )
         return 0
     tick(
@@ -975,7 +982,7 @@ def main(argv=None):
     if deduped:
         tick(f"{DIM}Skipping {deduped} handout duplicate(s) of fuller decks.{OFF}")
     if unreadable:
-        warn(f"{unreadable} deck(s) are image-only (need OCR) — I'll list them at the end.")
+        warn(f"{unreadable} deck(s) are image-only (need OCR), I'll list them at the end.")
     tick(
         f"{DIM}I save each note as I go, so you can stop me anytime (Ctrl-C) and just "
         f"run me again to continue.{OFF}"
@@ -1001,7 +1008,7 @@ def main(argv=None):
         cname = clean_course_name(course_folder)
         touched_years.add(year)
         print()
-        hal(f"→ {cname}  ({year}) — {len(decks)} item(s).")
+        hal(f"-> {cname}  ({year}), {len(decks)} item(s).")
         if args.interactive:
             try:
                 ans = input("   Start this course? [Y/n] ").strip().lower()
@@ -1017,12 +1024,12 @@ def main(argv=None):
             title = clean_title(Path(r["file"]).stem, r["code"])
             cache_abs = (vault / r["cache"]).resolve()
             if not cache_abs.is_file():
-                warn(f"{title}: cached text missing — skipping.")
+                warn(f"{title}: cached text missing, skipping.")
                 failed += 1
                 continue
             text = cache_abs.read_text(encoding="utf-8", errors="ignore").strip()
             if len(text) < 20:
-                warn(f"{title}: barely any text — skipping (needs OCR).")
+                warn(f"{title}: barely any text, skipping (needs OCR).")
                 unreadable += 1
                 continue
             try:
@@ -1033,15 +1040,15 @@ def main(argv=None):
                 note = write_note(vault, r, scan_dir, body)
                 created += 1
                 per_course[cname] = per_course.get(cname, 0) + 1
-                ok(f"{title}  {DIM}({time.time() - t0:.0f}s → {note.relative_to(vault)}){OFF}")
-            except Exception as e:  # noqa: BLE001 — keep grinding
+                ok(f"{title}  {DIM}({time.time() - t0:.0f}s -> {note.relative_to(vault)}){OFF}")
+            except Exception as e:  # noqa: BLE001 - one failing deck must not stop the batch
                 failed += 1
                 err(f"{title}: {e}")
 
         # Refresh this course's master index from whatever's now on disk (resumable).
         idx = build_course_index(vault, year, course_folder, scan_dir)
         if idx:
-            tick(f"{DIM}index → {idx.relative_to(vault)}{OFF}")
+            tick(f"{DIM}index -> {idx.relative_to(vault)}{OFF}")
 
     # Refresh the year hubs we touched, then the university root MOC on top.
     for year in sorted(touched_years):
@@ -1058,7 +1065,7 @@ def main(argv=None):
     else:
         hal("All done. Here's the tally:")
     tick(f"Notes written this run: {GREEN}{created}{OFF}")
-    tick(f"Already done (skipped): {len(queue) - len(todo) if not args.limit else '—'}")
+    tick(f"Already done (skipped): {len(queue) - len(todo) if not args.limit else '-'}")
     if deduped:
         tick(f"Handout duplicates skipped: {deduped}")
     if unreadable:
@@ -1075,9 +1082,9 @@ def main(argv=None):
 
     remaining = len(todo) - created - failed if not args.limit else None
     if STOP or failed or (remaining and remaining > 0):
-        hal("Run me again whenever — I'll skip everything that's done and carry on.")
+        hal("Run me again whenever, I'll skip everything that's done and carry on.")
     else:
-        hal("Your Study dashboard (Areas/Study/_Index.md) is up to date. — Hal")
+        hal("Your Study dashboard (Areas/Study/_Index.md) is up to date. - Hal")
     return 0
 
 
