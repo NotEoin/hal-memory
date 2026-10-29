@@ -6,9 +6,9 @@ them into `~/.claude/commands/`, so edits here reach Claude Code without reinsta
 Every command works in two modes and figures out which one it's in by checking whether the working
 directory is inside `$HAL_VAULT`:
 
-- **Vault mode** — memory is `$HAL_VAULT/CLAUDE.md`, session logs go to
+- **Vault mode**: memory is `$HAL_VAULT/CLAUDE.md`, session logs go to
   `$HAL_VAULT/Areas/Work/Session-Logs/`.
-- **Project mode** — memory is `./CLAUDE.md` if there is one, session logs go to
+- **Project mode**: memory is `./CLAUDE.md` if there is one, session logs go to
   `./CC-Session-Logs/`. If the repo has been registered with `hal-memory register-repos`, logs are
   mirrored into the vault as well.
 
@@ -23,7 +23,7 @@ pull (default 3); anything after it is treated as a topic to search for across t
 
 Loads the right `CLAUDE.md` for the mode, pulls the N most recent logs by filename date, and if a
 topic was given, greps the rest for it. Comes back with open tasks, active projects and whatever it
-found on the topic — deliberately terse, because anything it loads is context the actual work
+found on the topic, deliberately terse, because anything it loads is context the actual work
 doesn't get.
 
 ### `/compress`
@@ -54,9 +54,9 @@ Build today's morning brief and drop it into today's daily note.
 
 Runs `hal-memory brief`, which assembles open tasks and today's deadlines, yesterday's wins, active
 project and last session status, and a "concept of the day" pulled from the topic graph. It writes
-a marker-fenced `☀️ Morning Brief` block under the daily note's H1, so re-running it refreshes the
+a marker-fenced `Morning Brief` block under the daily note's H1, so re-running it refreshes the
 block rather than stacking another copy. If the model is unavailable it falls back to a plain,
-unsummarised brief. Cron-friendly — a 07:00 entry has it waiting before you sit down.
+unsummarised brief. Cron-friendly: a 07:00 entry has it waiting before you sit down.
 
 ### `/inbox-process`
 
@@ -65,7 +65,7 @@ frontmatter and links added on the way.
 
 ### `/weekly-review`
 
-Summarise the week from the daily notes and session logs — what got done, what stalled, what's
+Summarise the week from the daily notes and session logs: what got done, what stalled, what's
 carrying into next week.
 
 ---
@@ -77,7 +77,7 @@ carrying into next week.
 Answer a question using only your own notes, with `[[wikilink]]` citations.
 
 Runs `hal-memory ask`: finds the closest notes by keyword and by meaning (hal-memory's semantic
-index), and asks the model to answer *from those passages only* — citing each source note as an
+index), and asks the model to answer *from those passages only*, citing each source note as an
 Obsidian wikilink, or saying plainly that the notes don't cover it. The same retrieval is exposed
 to MCP clients by hal-hub as `memory_search` and `memory_recall`.
 
@@ -90,7 +90,7 @@ Retrieval runs on-device in every profile. The answer does too, unless `[memory]
 
 ### `/meeting-note`
 
-Turn a transcript or a page of scrappy notes into a structured meeting note — YAML frontmatter so
+Turn a transcript or a page of scrappy notes into a structured meeting note: YAML frontmatter so
 it shows up in Dataview queries, and wikilinks out to the people and topics mentioned.
 
 ### `/summarize-slides [course]`
@@ -120,15 +120,15 @@ Reads git metadata and README text only. It does not copy source into the vault,
 Live vault access goes through the **Local REST API** plugin, over `https://127.0.0.1:27124` with
 the plugin's own certificate. That gives search, read, append and patch against the *running*
 Obsidian instance, so notes update in front of you rather than on next reload. It only works while
-Obsidian is open — everything else in Hal reads the vault straight off disk and doesn't care.
+Obsidian is open; everything else in Hal reads the vault straight off disk and doesn't care.
 
 ## Vault layout
 
 ```
 Vault/
-├── +Inbox/       quick capture, emptied by /inbox-process
-├── Areas/        Work, Study, Personal, Health
-├── Calendar/     Daily, Weekly, Monthly
-├── System/       templates, dashboards, the profile note
-└── CLAUDE.md     permanent memory
+|-- +Inbox/       quick capture, emptied by /inbox-process
+|-- Areas/        Work, Study, Personal, Health
+|-- Calendar/     Daily, Weekly, Monthly
+|-- System/       templates, dashboards, the profile note
+`-- CLAUDE.md     permanent memory
 ```
