@@ -88,6 +88,9 @@ python3 -m halmem.idle --once      # one full sort, fix, index and audit pass no
 | `memory_daily`, `memory_log_conversation`, `memory_brief` | Daily notes, conversation logs, the morning brief |
 | `memory_sort`, `memory_link`, `memory_tidy`, `memory_index`, `memory_status` | The idle passes, on demand |
 
+A note name given to `memory_read`, `memory_append` or `memory_link` must resolve inside the vault
+(`..` and symlinks are followed first); anything else returns an error entry and is logged.
+
 ## Recall
 
 Recall searches by keyword and by meaning, merges the two by rank, and gives the model short

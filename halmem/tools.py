@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 from . import audit, capture, search, sorter, vault
 from .config import data_dir
+
+log = logging.getLogger(__name__)
 
 
 def remember(text: str, title: str = "", tags: list[str] | None = None) -> dict:
@@ -40,15 +43,26 @@ def recall(question: str, no_llm: bool = False) -> dict:
 
 
 def read(note: str) -> dict:
-    """Returns a note by title or vault-relative path."""
+    """Returns a note by title or vault-relative path.
+
+    The note must resolve inside the vault after `..` and symlinks are followed; anything else
+    (an absolute path elsewhere, a `..` escape, a symlink pointing out) is refused with an
+    error entry, so a model cannot read other files through a note name.
+    """
     path = None
-    if note.endswith(".md") or "/" in note:
-        path = vault.inside(Path(note if note.endswith(".md") else note + ".md"))
-    else:
-        path = vault.title_index().get(note.lower())
-        if path is None:
-            hits = [p for p in vault.notes() if p.stem.lower() == note.lower()]
-            path = hits[0] if hits else None
+    try:
+        if note.endswith(".md") or "/" in note:
+            path = vault.inside(Path(note if note.endswith(".md") else note + ".md"))
+        else:
+            path = vault.title_index().get(note.lower())
+            if path is None:
+                hits = [p for p in vault.notes() if p.stem.lower() == note.lower()]
+                path = hits[0] if hits else None
+            if path is not None:
+                path = vault.inside(path)
+    except ValueError:
+        log.warning("refused note name outside the vault: %r", note)
+        return {"error": f"{note!r} is not a note inside the vault"}
     if path is None or not path.exists():
         return {"error": f"no note called {note}"}
     return {"path": vault.rel(path), "text": path.read_text(errors="ignore")[:12000]}
