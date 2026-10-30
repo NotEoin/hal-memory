@@ -61,6 +61,30 @@ step) and starts the idle sorter with Hal's other services. The unit runs `@PYTH
 `skills/` holds 12 Agent Skills for the vault. See [skills](docs/user/skills.md) and the how-to
 [install the skills](docs/howto/install-skills.md).
 
+## Privacy and safety
+
+| Path | Private? | Notes |
+| --- | --- | --- |
+| Capture, sort, link, search, index, brief | Yes | Local files and local models only. |
+| `memory_recall` and every other tool call | Yes | Always answers with the local model, whatever `answerer` says. |
+| `hal-memory ask --answerer claude` | No | Not private, not sandboxed: the retrieved passages go to Claude Code (`claude -p`). Off by default (`answerer = "local"`); only a person at the command line can use it. |
+
+A note name given to a tool must resolve inside the vault; `..` and symlinks that leave it are
+refused. Setup never edits `.mcp.json` unless you pass `--write-mcp`. See [SECURITY.md](SECURITY.md).
+
+## Run and test
+
+```bash
+hal-memory ask "What did I decide about caching?"   # answer from the vault
+hal-memory mcp                                      # serve the tools over MCP stdio
+python -m pytest -q                                 # hermetic tests, see docs/dev/testing.md
+```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Changes are listed in
+[CHANGELOG.md](CHANGELOG.md).
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
