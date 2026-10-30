@@ -31,6 +31,7 @@ def test_wheel_contains_manifest_and_script(wheel):
     assert "halmem/hal-module.toml" in names
     assert "halmem/ingest/extract-pdfs.sh" in names
     assert "halmem/systemd/hal-memory-idle.service" in names
+    assert "halmem/skills/ask/SKILL.md" in names
     entry = next(n for n in names if n.endswith("entry_points.txt"))
     text = wheel.read(entry).decode()
     assert "hal-memory = halmem.__main__:main" in text

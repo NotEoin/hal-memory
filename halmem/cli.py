@@ -9,7 +9,8 @@
     hal-memory import prepare [DIR] [--ocr] [--force]   extract text from every document, write SLIDES-REPORT.md
     hal-memory import extract pdf|docx|pptx|html [DIR] [--ocr] [--force]
     hal-memory register-repos [PATH ...] [--github URL [NAME]] [--depth N] [--refresh]
-    hal-memory setup [--check] [--commands-dir DIR] [--bin-dir DIR] [--no-pull]
+    hal-memory setup [--check] [--commands-dir DIR] [--skills-dir DIR] [--bin-dir DIR] [--no-pull]
+    hal-memory skills list|install|remove [--target T]... [--mode link|copy] [--check] [--force]
     hal-memory obsidian-key KEY
     hal-memory TOOL [key=value ...]                       run any tool in hal-module.toml
 """
@@ -189,7 +190,11 @@ def setup(argv: list[str]) -> int:
     )
     ap.add_argument("--check", action="store_true", help="only report what is missing")
     ap.add_argument(
-        "--commands-dir", help="where Claude Code slash commands go (default ~/.claude/commands)"
+        "--commands-dir",
+        help="where the old setup linked slash commands, to clean up (default ~/.claude/commands)",
+    )
+    ap.add_argument(
+        "--skills-dir", help="install the skills here only (default: the default skill targets)"
     )
     ap.add_argument("--bin-dir", help="where to link the hal-memory command (default ~/.local/bin)")
     ap.add_argument(
@@ -198,7 +203,46 @@ def setup(argv: list[str]) -> int:
     a = ap.parse_args(argv)
     from . import install
 
-    return install.run(a.check, a.commands_dir, a.bin_dir, pull=not a.no_pull)
+    return install.run(
+        a.check, a.commands_dir, a.bin_dir, pull=not a.no_pull, skills_dir=a.skills_dir
+    )
+
+
+def skills(argv: list[str]) -> int:
+    """`hal-memory skills list|install|remove`: manage the Agent Skills in a harness's folder."""
+    from . import skillsinstall as si
+
+    ap = argparse.ArgumentParser(
+        prog="hal-memory skills", description="Install hal-memory's Agent Skills for a harness."
+    )
+    ap.add_argument("action", choices=("list", "install", "remove"))
+    ap.add_argument(
+        "--target",
+        action="append",
+        help="claude, agents, hal, codex, qwen, goose or dir:PATH; repeat for several",
+    )
+    ap.add_argument("--mode", choices=si.MODES, default="link", help="symlink or copy")
+    ap.add_argument("--check", action="store_true", help="only report what would change")
+    ap.add_argument("--force", action="store_true", help="replace foreign folders, keeping .bak")
+    a = ap.parse_args(argv)
+    if a.action == "list":
+        for name in si.skill_names():
+            print(name)
+        return 0
+    try:
+        folders = [si.resolve_target(t) for t in a.target or si.default_targets()]
+    except ValueError as e:
+        print(f"hal-memory skills: {e}", file=sys.stderr)
+        return 2
+    if a.action == "install":
+        report = si.install(folders, mode=a.mode, check=a.check, force=a.force)
+    else:
+        report = si.remove(folders, check=a.check)
+    for line in report.lines:
+        print(line)
+    if not report.lines:
+        print("nothing to do")
+    return 1 if report.refused or (a.check and report.todo) else 0
 
 
 def obsidian_key(argv: list[str]) -> int:
@@ -219,6 +263,7 @@ COMMANDS = {
     "import": import_,
     "register-repos": register_repos,
     "setup": setup,
+    "skills": skills,
     "obsidian-key": obsidian_key,
 }
 

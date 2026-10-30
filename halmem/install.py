@@ -1,4 +1,4 @@
-"""`hal-memory setup`: slash commands, document tools, the embedding model and the vault's MCP servers.
+"""`hal-memory setup`: skills, document tools, the embedding model and the vault's MCP servers.
 
 Safe to re-run; with check=True it only reports. Nothing here uses sudo: missing
 system packages are reported with the command that installs them.
@@ -12,10 +12,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from . import skillsinstall
 from .config import shared, vault
 
 ROOT = Path(__file__).resolve().parents[1]
-COMMANDS = ROOT / "claude-commands"
 OLLAMA_LIST_TIMEOUT = 30  # seconds; `ollama list` answers at once when the server is up
 OLLAMA_PULL_TIMEOUT = 3600  # seconds; an embedding model is under 1 GB
 APT = {
@@ -56,55 +56,6 @@ def save_key(key: str) -> Path:
         f.write(key.strip())
     p.chmod(0o600)
     return p
-
-
-def _backup(p: Path) -> Path:
-    bak = p.with_name(p.name + ".bak")
-    n = 1
-    while bak.exists() or bak.is_symlink():
-        bak = p.with_name(f"{p.name}.bak.{n}")
-        n += 1
-    p.rename(bak)
-    return bak
-
-
-def _same(a: Path, b: Path) -> bool:
-    try:
-        return a.read_bytes() == b.read_bytes()
-    except OSError:
-        return False
-
-
-def link_commands(dest: Path, check: bool) -> int:
-    """Symlinks each slash command into `dest`, backing up a different file of the same name."""
-    todo = 0
-    for src in sorted(COMMANDS.glob("*.md")):
-        target = dest / src.name
-        if target.is_symlink() and target.resolve() == src.resolve():
-            continue
-        todo += 1
-        if check:
-            say(
-                "todo",
-                f"link {target}"
-                + (
-                    " (replacing a different file)"
-                    if target.exists() and not _same(target, src)
-                    else ""
-                ),
-            )
-            continue
-        dest.mkdir(parents=True, exist_ok=True)
-        if target.exists() or target.is_symlink():
-            if _same(target, src):
-                target.unlink()
-            else:
-                say("backup", f"{target} -> {_backup(target).name}")
-        target.symlink_to(src)
-        say("linked", str(target))
-    if not todo:
-        say("ok", f"slash commands linked in {dest}")
-    return todo
 
 
 def check_tools() -> int:
@@ -277,20 +228,44 @@ def link_bin(bin_dir: Path, check: bool) -> int:
     return 0
 
 
+def install_skills(skills_dir: str | None, commands: Path, check: bool) -> int:
+    """Installs the skills and removes the old command links; returns how many things are left."""
+    folders = (
+        [Path(skills_dir).expanduser()]
+        if skills_dir
+        else [skillsinstall.resolve_target(t) for t in skillsinstall.default_targets()]
+    )
+    todo = 0
+    for report in (
+        skillsinstall.install(folders, check=check),
+        skillsinstall.clean_legacy(commands, check=check),
+    ):
+        for line in report.lines:
+            say("skills", line)
+        todo += report.todo if check else report.refused
+    if not todo:
+        say("ok", "skills installed in " + ", ".join(str(f) for f in folders))
+    return todo
+
+
 def run(
     check: bool = False,
     commands_dir: str | None = None,
     bin_dir: str | None = None,
     pull: bool = True,
+    skills_dir: str | None = None,
 ) -> int:
-    """Runs every setup step; returns the exit status (with check, 1 when anything is left to do)."""
+    """Runs every setup step; returns the exit status (with check, 1 when anything is left to do).
+
+    `commands_dir` is where the old setup linked slash commands; those links are removed.
+    """
     commands = Path(
         commands_dir or os.environ.get("HAL_CLAUDE_COMMANDS", "~/.claude/commands")
     ).expanduser()
     bins = Path(bin_dir or os.environ.get("HAL_BIN_DIR", "~/.local/bin")).expanduser()
     root = vault()
     print(f"hal-memory setup{' --check' if check else ''}: vault {root}")
-    todo = link_commands(commands, check) + link_bin(bins, check) + check_tools()
+    todo = install_skills(skills_dir, commands, check) + link_bin(bins, check) + check_tools()
     todo += embed_model(check) if pull else 0
     todo += make_vault(root, check)
     todo += mcp_file(root / ".mcp.json", check) if root.is_dir() or not check else 0

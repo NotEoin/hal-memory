@@ -81,6 +81,7 @@ class Base(unittest.TestCase):
             HAL_DATA=str(self.base / "data"),
             HAL_OBSIDIAN_KEY_FILE=str(self.base / "home" / "obsidian_api_key"),
             HAL_PYTHON=sys.executable,
+            HAL_STATE_DIR=str(self.base / "state"),
         )
         if path_dir:
             env["PATH"] = f"{path_dir}{os.pathsep}{env['PATH']}"
@@ -312,6 +313,10 @@ class SetupTest(Base):
         self.commands.mkdir()
         (self.commands / "ask.md").write_text("my own ask\n")
         (self.commands / "jobs.md").write_text("someone else's command\n")
+        (self.commands / "load-context.md").symlink_to(
+            "/old/hal-memory/claude-commands/load-context.md"
+        )
+        self.skills = self.base / "skills"
         self.mcp = self.vault / ".mcp.json"
         self.mcp.write_text(
             json.dumps(
@@ -337,6 +342,8 @@ class SetupTest(Base):
             "setup",
             "--commands-dir",
             str(self.commands),
+            "--skills-dir",
+            str(self.skills),
             "--bin-dir",
             str(self.base / "bin"),
             *extra,
@@ -349,10 +356,11 @@ class SetupTest(Base):
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
         self.assertIn("remove hal", r.stdout)
         self.assertEqual(self.mcp.read_text(), before)
-        self.assertFalse((self.commands / "load-context.md").exists())
+        self.assertTrue((self.commands / "load-context.md").is_symlink())
+        self.assertFalse(self.skills.exists())
         self.assertFalse(self.pulls.exists())
 
-    def test_setup_links_commands_merges_mcp_and_pulls(self):
+    def test_setup_links_skills_merges_mcp_and_pulls(self):
         r = self.setup_cli()
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         servers = json.loads(self.mcp.read_text())["mcpServers"]
@@ -365,10 +373,11 @@ class SetupTest(Base):
         )  # the user's own entry is kept
         self.assertEqual(servers["other"], {"command": "x"})
         self.assertTrue((self.vault / ".mcp.json.bak").exists())
-        ask = self.commands / "ask.md"
+        ask = self.skills / "ask"
         self.assertTrue(ask.is_symlink())
-        self.assertEqual(ask.resolve(), (ROOT / "claude-commands" / "ask.md").resolve())
-        self.assertEqual((self.commands / "ask.md.bak").read_text(), "my own ask\n")
+        self.assertEqual(ask.resolve(), (ROOT / "skills" / "ask").resolve())
+        self.assertFalse((self.commands / "load-context.md").is_symlink())
+        self.assertEqual((self.commands / "ask.md").read_text(), "my own ask\n")
         self.assertEqual((self.commands / "jobs.md").read_text(), "someone else's command\n")
         self.assertTrue((self.base / "bin" / "hal-memory").is_symlink())
         self.assertIn("pull embeddinggemma", self.pulls.read_text())
@@ -377,7 +386,7 @@ class SetupTest(Base):
         r = self.setup_cli("--no-pull")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.mcp.read_text(), mcp)
-        self.assertFalse((self.commands / "ask.md.bak.1").exists())
+        self.assertFalse((self.skills / "ask.bak").exists())
 
     def test_first_install_creates_the_vault(self):
         from halmem import install

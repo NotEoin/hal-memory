@@ -26,6 +26,7 @@ build-backend = "hatchling.build"
 packages = ["halmem"]
 
 [tool.hatch.build.targets.wheel.force-include]
+"skills" = "halmem/skills"
 "systemd" = "halmem/systemd"
 
 [tool.uv.sources]

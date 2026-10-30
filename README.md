@@ -41,7 +41,7 @@ step) and starts the idle sorter with Hal's other services. `hal-memory setup` i
 
 | Step | What it does |
 | --- | --- |
-| Slash commands | Symlinks `claude-commands/*.md` into `~/.claude/commands/`. A different file of the same name is kept as `<name>.md.bak`. |
+| Skills | Links `skills/<name>` into `~/.agents/skills`, `~/.config/hal/skills` and, when `~/.claude` exists, `~/.claude/skills`. A folder it did not install is refused unless `hal-memory skills install --force` (then kept as `<name>.bak`). It also removes the old symlinks in `~/.claude/commands`. |
 | Command | Symlinks `bin/hal-memory` into `~/.local/bin/`. |
 | Document tools | Reports missing `pdftotext`, `tesseract` and `pandoc` with the `apt-get` command; it never runs sudo. |
 | Embedding model | Pulls `[hal].embed_model` with `ollama pull` if it is missing. |
@@ -146,7 +146,7 @@ it. To have it ready at 07:00:
 
 ## Slash commands
 
-`claude-commands/` holds the Claude Code commands for the vault: `/load-context`, `/compress`,
+`skills/` holds the Agent Skills for the vault (`hal-memory skills list|install|remove`): `/load-context`, `/compress`,
 `/preserve`, `/daily-note`, `/morning-brief`, `/inbox-process`, `/weekly-review`, `/ask`,
 `/meeting-note`, `/summarize-slides`, `/import-vault` and `/index-repos`. See
 [SLASH-COMMANDS.md](SLASH-COMMANDS.md).
@@ -215,7 +215,7 @@ These used to live in the `hal` launcher's repo and now live here:
 | `morning-brief.py` | `halmem/brief.py` (`hal brief`, `memory_brief`) |
 | `vault-index.py`, `hal_rag.py`, `ask.py` | hal-memory's search and recall (`hal index`, `hal ask`) |
 | `hal-mcp.py` (the `hal` MCP server) | hal-hub's MCP server, with `memory_search`, `memory_recall` and `memory_read` |
-| `claude-commands/`, `SLASH-COMMANDS.md` | Here, linked by `hal-memory setup` |
+| `claude-commands/`, `SLASH-COMMANDS.md` | Here as `skills/` and `SLASH-COMMANDS.md`, linked by `hal-memory setup` |
 | `hal obsidian-key` | `hal-memory obsidian-key` |
 
 The old index under `<vault>/System/.rag/` is no longer read and can be deleted. Run

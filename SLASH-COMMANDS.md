@@ -1,7 +1,9 @@
-# Hal slash commands
+# Hal skills
 
-These Claude Code commands ship with hal-memory in `claude-commands/`. `hal-memory setup` links
-them into `~/.claude/commands/`, so edits here reach Claude Code without reinstalling.
+These Agent Skills ship with hal-memory in `skills/<name>/SKILL.md`. `hal-memory setup` (or
+`hal-memory skills install`) links them into the skills folder of your harness, so edits here
+reach it without reinstalling. In Claude Code they run as `/<name>`; other harnesses load them by
+name or description.
 
 Every command works in two modes and figures out which one it's in by checking whether the working
 directory is inside `$HAL_VAULT`:
