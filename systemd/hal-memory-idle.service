@@ -6,7 +6,7 @@ X-HalGPU=yes
 
 [Service]
 WorkingDirectory=@ROOT@
-ExecStart=/usr/bin/python3 -m halmem.idle
+ExecStart=@PYTHON@ -m halmem.idle
 Environment=PYTHONUNBUFFERED=1
 Nice=10
 Restart=on-failure

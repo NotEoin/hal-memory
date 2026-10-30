@@ -36,3 +36,9 @@ def test_wheel_contains_manifest_and_script(wheel):
     text = wheel.read(entry).decode()
     assert "hal-memory = halmem.__main__:main" in text
     assert "memory = halmem" in text
+
+
+def test_idle_unit_runs_from_the_package_python():
+    unit = (ROOT / "systemd" / "hal-memory-idle.service").read_text()
+    assert "ExecStart=@PYTHON@ -m halmem.idle" in unit
+    assert "/usr/bin/python3" not in unit

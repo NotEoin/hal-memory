@@ -37,7 +37,7 @@ hal ext add memory
 ```
 
 That clones it into the ecosystem's `extensions/` folder, runs `hal-memory setup` (its install
-step) and starts the idle sorter with Hal's other services. `hal-memory setup` is safe to re-run. It:
+step) and starts the idle sorter with Hal's other services. The unit runs `@PYTHON@ -m halmem.idle`, where Hal's unit renderer fills in the Python that has hal-memory installed. `hal-memory setup` is safe to re-run. It:
 
 | Step | What it does |
 | --- | --- |
