@@ -80,6 +80,7 @@ class Base(unittest.TestCase):
             HAL_CONFIG=str(self.config),
             HAL_DATA=str(self.base / "data"),
             HAL_OBSIDIAN_KEY_FILE=str(self.base / "home" / "obsidian_api_key"),
+            HAL_PYTHON=sys.executable,
         )
         if path_dir:
             env["PATH"] = f"{path_dir}{os.pathsep}{env['PATH']}"

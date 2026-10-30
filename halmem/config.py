@@ -1,11 +1,16 @@
-"""Settings for hal-memory: the [memory] table of ~/.config/hal/config.toml over DEFAULTS.
+"""Settings for hal-memory: the [memory] table over defaults, through `halkit.config`.
 
-The shared [hal] table supplies the vault path and the local model settings.
+The shared [hal] table (vault path, models, user name) comes from `halkit.config.hal()`, so a
+bad file or key raises `ConfigError` naming the file and key instead of falling back silently.
 """
 
-import os
-import tomllib
+from __future__ import annotations
+
+from collections.abc import Mapping
 from pathlib import Path
+
+from halkit import config as kitconfig
+from halkit import paths
 
 SECTION = "memory"
 DEFAULTS: dict = {
@@ -41,37 +46,48 @@ DEFAULTS: dict = {
     "answerer": "local",  # who writes recall answers: local (the chat model) or claude (claude -p)
     "university": "University",  # root note of the study hierarchy that summarize builds
 }
-SHARED = {
-    "vault": "~/Documents/vaults/Hal",
-    "ollama_url": "http://localhost:11434",
-    "chat_model": "qwen3.5:9b",
-    "fast_model": "qwen3.5:4b",
-    "embed_model": "embeddinggemma",
-    "vision_model": "qwen3-vl:8b",
-    "user_name": "",  # how Hal refers to you in conversation logs and the profile; empty means "you"
-}
+
+
+def _keys() -> tuple[kitconfig.Key, ...]:
+    docs = {
+        "folders": "Where the sorter files each kind of note, relative to the vault root",
+        "answerer": "Who writes recall answers: local (the chat model) or claude (claude -p)",
+        "review_below": "Classifier confidence under this marks a note needs-review",
+        "idle_minutes": "Minutes the desktop must be idle before a sorting pass",
+        "batch": "Notes per sorting pass, so a pass never runs for long",
+        "related_min": "Semantic similarity a note needs to be listed as Related",
+    }
+    keys = []
+    for name, default in DEFAULTS.items():
+        kind = type(default)
+        keys.append(
+            kitconfig.Key(
+                name,
+                (int, float) if kind is float else kind,
+                default,
+                choices=("local", "claude") if name == "answerer" else None,
+                doc=docs.get(name, name.replace("_", " ")),
+            )
+        )
+    return tuple(keys)
+
+
+MEMORY_TABLE = kitconfig.register(kitconfig.Table(name=SECTION, keys=_keys(), owner="hal-memory"))
 
 
 def config_path() -> Path:
     """Returns the shared config file; HAL_CONFIG overrides it, read on every call."""
-    return Path(os.environ.get("HAL_CONFIG", "~/.config/hal/config.toml")).expanduser()
-
-
-def _file() -> dict:
-    try:
-        return tomllib.loads(config_path().read_text())
-    except (OSError, tomllib.TOMLDecodeError):
-        return {}
+    return paths.config_file()
 
 
 def settings() -> dict:
-    """Returns this module's settings merged over its defaults."""
-    return {**DEFAULTS, **_file().get(SECTION, {})}
+    """Returns this module's settings merged over its defaults; raises `ConfigError` if bad."""
+    return dict(kitconfig.load(MEMORY_TABLE))
 
 
-def shared() -> dict:
-    """Returns the ecosystem-wide settings."""
-    return {**SHARED, **_file().get("hal", {})}
+def shared() -> Mapping[str, object]:
+    """Returns the ecosystem-wide `[hal]` settings."""
+    return kitconfig.hal()
 
 
 def user_name() -> str:
@@ -80,12 +96,12 @@ def user_name() -> str:
 
 
 def vault() -> Path:
-    return Path(shared()["vault"]).expanduser()
+    """Returns the vault root from `[hal].vault`."""
+    return Path(str(shared()["vault"])).expanduser()
 
 
 def data_dir() -> Path:
     """Returns this module's data directory, creating it."""
-    base = Path(os.environ.get("HAL_DATA", "~/.local/share/hal")).expanduser()
-    path = base / SECTION
+    path = paths.data_dir() / SECTION
     path.mkdir(parents=True, exist_ok=True)
     return path
