@@ -1,30 +1,50 @@
+schema = 2
+
 [module]
 name = "memory"
+pack = "memory"
 summary = "Lasting memory in one Obsidian vault: capture, search, recall and tidy"
 python = "halmem.tools"
-# Run by an installer after cloning: links the slash commands and the hal-memory command,
-# pulls the embedding model and registers the vault's MCP servers. Safe to re-run.
-install = ["{root}/../bin/hal-memory", "setup"]
+
+# Run after a typed confirmation: links the skills, pulls the embedding model and prepares the
+# vault. Safe to re-run.
+[[install]]
+id = "setup"
+summary = "Link the memory skills, pull the embedding model and prepare the vault"
+run = ["{python}", "-m", "halmem", "setup"]
+timeout = 1800
+network = true
+
+[[units]]
+file = "systemd/hal-memory-idle.service"
+gpu = true
 
 [[tools]]
 name = "memory_remember"
 function = "remember"
 description = "Save something to Hal's memory (the vault inbox) to be filed and linked later. Use for anything the user says to remember, notes, ideas, facts about people or plans."
-keywords = "note save write down idea"
+tier = "write"
+reviewable = true
+always_offer = true
+keywords = ["note", "save", "write", "down", "idea"]
 [tools.params.text]
 description = "what to remember, in full"
 required = true
+content = true
 [tools.params.title]
 description = "short title"
 [tools.params.tags]
-type = "array"
+list = true
+item_type = "string"
 description = "tags"
 
 [[tools]]
 name = "memory_fact"
 function = "remember_fact"
 description = "Record a lasting fact about the user (a preference, routine, detail about their life) in their profile, which Hal reads first."
-keywords = "preference profile about me like dislike"
+tier = "write"
+reviewable = true
+keywords = ["preference", "profile", "about", "me", "like", "dislike"]
 [tools.params.fact]
 description = "the fact, as one sentence"
 required = true
@@ -33,13 +53,20 @@ required = true
 name = "memory_profile"
 function = "profile"
 description = "Return everything Hal knows about the user from their profile note."
-keywords = "about me who am i"
+tier = "read"
+untrusted_output = true
+reviewable = true
+keywords = ["about", "me", "who", "am", "i"]
 
 [[tools]]
 name = "memory_search"
 function = "search_notes"
 description = "Search the vault (notes, lectures, projects, conversations, people) by meaning and keywords. Returns matching notes with snippets."
-keywords = "find look up notes vault obsidian"
+tier = "read"
+untrusted_output = true
+reviewable = true
+always_offer = true
+keywords = ["find", "look", "up", "notes", "vault", "obsidian"]
 [tools.params.query]
 description = "what to look for"
 required = true
@@ -51,7 +78,11 @@ description = "most results"
 name = "memory_recall"
 function = "recall"
 description = "Answer a question from the vault, citing the notes used. Use for 'what did I...', 'when did we...', 'what do my notes say about...'."
-keywords = "question answer remember recall what did i"
+tier = "read"
+untrusted_output = true
+reviewable = true
+always_offer = true
+keywords = ["question", "answer", "remember", "recall", "what", "did", "i"]
 timeout = 300
 [tools.params.question]
 description = "the question"
@@ -64,6 +95,9 @@ description = "return the matching notes and passages only, without a written an
 name = "memory_read"
 function = "read"
 description = "Read a note from the vault by its title or path."
+tier = "read"
+untrusted_output = true
+reviewable = true
 [tools.params.note]
 description = "note title or vault-relative path"
 required = true
@@ -72,21 +106,28 @@ required = true
 name = "memory_append"
 function = "append"
 description = "Add text to the end of an existing note."
+tier = "write"
+reviewable = true
 [tools.params.note]
 description = "note title or path"
 required = true
 [tools.params.text]
 description = "text to add"
 required = true
+content = true
 
 [[tools]]
 name = "memory_log_conversation"
 function = "log_conversation"
 description = "Append one exchange to today's conversation log in the vault."
+tier = "write"
+reviewable = true
 [tools.params.user]
 required = true
+content = true
 [tools.params.assistant]
 required = true
+content = true
 [tools.params.channel]
 description = "voice, telegram or chat"
 
@@ -94,7 +135,10 @@ description = "voice, telegram or chat"
 name = "memory_daily"
 function = "daily"
 description = "Return today's daily note (or a given date's), creating it if needed."
-keywords = "journal today diary"
+tier = "write"
+untrusted_output = true
+reviewable = true
+keywords = ["journal", "today", "diary"]
 [tools.params.date]
 description = "YYYY-MM-DD; today if empty"
 
@@ -102,6 +146,8 @@ description = "YYYY-MM-DD; today if empty"
 name = "memory_sort"
 function = "sort_inbox"
 description = "File inbox notes now: classify, title, tag, link and move them. Normally runs by itself when the PC is idle."
+tier = "write"
+reviewable = true
 timeout = 900
 [tools.params.limit]
 type = "integer"
@@ -110,6 +156,8 @@ type = "integer"
 name = "memory_link"
 function = "link"
 description = "Run the wikilink pass: link mentions of existing notes in one note or across the vault."
+tier = "write"
+reviewable = true
 timeout = 600
 [tools.params.note]
 description = "note title or path; empty for a vault-wide pass"
@@ -120,6 +168,8 @@ type = "integer"
 name = "memory_tidy"
 function = "tidy"
 description = "Run a quality pass: audit changed notes and fix missing links, orphans and doubtful filings."
+tier = "write"
+reviewable = true
 timeout = 900
 [tools.params.limit]
 type = "integer"
@@ -128,11 +178,15 @@ type = "integer"
 name = "memory_status"
 function = "status"
 description = "Report the vault's state: inbox size, notes needing review or links, and the last tidy pass."
+tier = "read"
+reviewable = true
 
 [[tools]]
 name = "memory_index"
 function = "update_index"
 description = "Update the semantic search index for notes that changed."
+tier = "write"
+reviewable = true
 timeout = 1800
 [tools.params.limit]
 type = "integer"
@@ -141,7 +195,10 @@ type = "integer"
 name = "memory_brief"
 function = "brief"
 description = "Write the morning brief into today's daily note: open tasks and deadlines, yesterday's work, active projects and the last session, and a concept of the day. Returns the brief."
-keywords = "morning brief day plan agenda today summary"
+tier = "write"
+untrusted_output = true
+reviewable = true
+keywords = ["morning", "brief", "day", "plan", "agenda", "today", "summary"]
 timeout = 600
 [tools.params.date]
 description = "YYYY-MM-DD; today if empty"
