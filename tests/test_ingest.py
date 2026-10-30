@@ -169,28 +169,6 @@ class RecallTest(Base):
         self.assertIn("Redis", r.stdout)
 
 
-class ModelClientTest(Base):
-    def test_openai_backend_follows_the_launcher(self):
-        sent = {}
-
-        def post(url, payload, timeout):
-            sent.update(url=url, payload=payload)
-            return {"choices": [{"message": {"content": "ok"}}]}
-
-        real_post = self.llm._post
-        self.llm._post = post
-        os.environ.update(
-            HAL_CHAT_API="openai", HAL_CHAT_URL="http://127.0.0.1:8080", HAL_MODEL="hal-gpu"
-        )
-        try:
-            self.assertEqual(self.real[1]("sys", "hi"), "ok")
-        finally:
-            self.llm._post = real_post
-        self.assertEqual(sent["url"], "http://127.0.0.1:8080/v1/chat/completions")
-        self.assertEqual(sent["payload"]["model"], "hal-gpu")
-        self.assertFalse(sent["payload"]["chat_template_kwargs"]["enable_thinking"])
-
-
 class CommandTest(Base):
     def test_help_lists_subcommands_and_tools(self):
         r = self.run_cli("--help")

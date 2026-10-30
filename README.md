@@ -28,7 +28,7 @@ Code slash commands that work on the vault.
 
 ## Install
 
-hal-memory needs Python 3.11 or later, Ollama with an embedding model and a chat model, and an
+hal-memory needs Python 3.11 or later, the Hal gateway (or, standalone, Ollama) with an embedding model and a chat model, and an
 Obsidian vault. numpy makes semantic search faster but is optional. Importing documents uses
 `pdftotext`, `tesseract` and `pandoc` (and `python-pptx` for PowerPoint files).
 

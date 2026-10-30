@@ -28,7 +28,7 @@ model is fast enough on the CPU).
 | --- | --- |
 | `HAL_CONFIG`, `HAL_DATA` | Another config file, another data folder (the index lives in `<data>/memory/index.db`) |
 | `HAL_VAULT` | Another vault for one run of `import`, `summarize`, `register-repos` and `brief`; search, recall and the index always use `[hal].vault` |
-| `HAL_MODEL`, `HAL_CHAT_API`, `HAL_CHAT_URL` | Chat model and server, as set by the `hal` launcher |
+| `HAL_MODEL` | Chat model, as set by the `hal` launcher; default is the `hal-chat` gateway alias |
 | `HAL_ANSWERER`, `HAL_UNIVERSITY` | Override `answerer` and `university` |
 | `HAL_TOOL_TIMEOUT` | Seconds each external tool call in the import scripts (`pandoc`, `pdftotext`, `tesseract`, `git`) may run before it is stopped; default 120 |
 

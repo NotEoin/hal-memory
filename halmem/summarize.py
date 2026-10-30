@@ -1,7 +1,7 @@
 """Hal's unattended, self-resuming lecture-note runner (`hal-memory summarize`).
 
 Reads `_Import-Staging/SLIDES-REPORT.md`, then for every deck/paper/exercise that
-still needs a note it loads the cached text, asks the LOCAL model (Ollama) to write
+still needs a note it loads the cached text, asks the LOCAL model (through the Hal gateway) to write
 a self-contained study note, and files it under
 `Areas/Study/<Year>/<Course>/<Title>.md`.
 
@@ -36,12 +36,11 @@ Usage:
   hal summarize --interactive     # pause for a nod before each course
   hal summarize --limit N         # only the next N decks (good for a trial run)
   hal summarize --include-maybe   # also revisit rows flagged 'maybe'
-  hal summarize --model NAME       # use a different Ollama model
+  hal summarize --model NAME       # use a different model
   hal summarize --mock            # wiring test: no model call, placeholder notes
 
 `hal summarize` runs `hal-memory summarize`, which takes the same options. The model is
-HAL_MODEL when the hal launcher sets one, else [hal].chat_model; HAL_CHAT_API=openai sends
-the calls to the launcher's llama.cpp server instead of Ollama.
+HAL_MODEL when the hal launcher sets one, else the `hal-chat` gateway alias.
 """
 
 import argparse

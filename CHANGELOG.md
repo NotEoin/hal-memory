@@ -6,6 +6,8 @@ All notable changes are listed here, newest first.
 
 - Packaging: `pyproject.toml`, the `hal-memory` command, the `hal.packs` entry point, CI with
   ruff, an ASCII gate, tests on Python 3.11 to 3.13 and gitleaks.
+- Model calls go through `halkit.llm` (gateway aliases `hal-chat`, `hal-embed`). `HAL_CHAT_API`
+  and `HAL_CHAT_URL` are gone; with the gateway stopped a call fails instead of using another route.
 - Config is read through `halkit.config`: an unknown or invalid `[memory]` key is an error that
   names the key.
 - The manifest is schema 2 with tiers, `untrusted_output`, `always_offer` and `content`
