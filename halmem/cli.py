@@ -138,7 +138,7 @@ def brief(argv: list[str]) -> int:
     ap.add_argument(
         "--no-llm", "--mock", action="store_true", help="the gathered facts only, no model call"
     )
-    ap.add_argument("--model", help="chat model (default HAL_MODEL or [hal].chat_model)")
+    ap.add_argument("--model", help="chat model (default HAL_MODEL or the hal-chat alias)")
     a = ap.parse_args(argv)
     from . import brief as briefing
 

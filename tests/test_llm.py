@@ -112,6 +112,17 @@ class ModelCallTests(unittest.TestCase):
             self.assertEqual(llm.chat_model(), "custom")
 
 
+class AnswererDefaultTests(unittest.TestCase):
+    def test_answerer_defaults_to_local_never_claude(self):
+        """Directive I4: Claude Code is never called unless the user sets the key."""
+        from halmem import search
+
+        with mock.patch.dict("os.environ", {"HAL_CONFIG": "/nonexistent/c.toml"}):
+            os_env = __import__("os").environ
+            os_env.pop("HAL_ANSWERER", None)
+            self.assertEqual(search.answerer(), "local")
+
+
 class SourceScanTests(unittest.TestCase):
     def sources(self):
         return [p for p in PACKAGE.rglob("*.py") if p.name not in SETUP_ONLY and p.name != "llm.py"]

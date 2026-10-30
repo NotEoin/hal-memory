@@ -33,7 +33,7 @@ Originals are never modified; everything works on a copy inside the vault.
    hal-memory register-repos ~/code  # git metadata only; credentials stripped from remotes
    ```
 
-The summariser uses `HAL_MODEL` when set, else `[hal].chat_model`; the study root note is
+The summariser uses `HAL_MODEL` when set, else the `hal-chat` gateway alias; the study root note is
 `[memory].university`.
 
 | Symptom | Fix |

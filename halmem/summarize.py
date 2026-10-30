@@ -879,7 +879,7 @@ def main(argv=None):
     ap.add_argument(
         "--model",
         default=llm.chat_model(),
-        help="chat model (default: HAL_MODEL or [hal].chat_model)",
+        help="chat model (default: HAL_MODEL or the hal-chat alias)",
     )
     ap.add_argument("--mock", action="store_true", help="no model call; write placeholder notes")
     args = ap.parse_args(argv)
