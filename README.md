@@ -68,6 +68,7 @@ step) and starts the idle sorter with Hal's other services. `hal-memory setup` i
 | `hal-memory register-repos [PATH ...] [--github URL [NAME]] [--depth N] [--refresh]` | Add git repos to `Areas/Code/` as hub notes. |
 | `hal-memory setup [--check]` | See Install. |
 | `hal-memory obsidian-key KEY` | Save the Obsidian Local REST API key to `~/.config/hal/obsidian_api_key` (mode 600). |
+| `hal-memory mcp` | Serve the 15 memory tools over MCP stdio, through halhub's pack runner; needs no Hal core. `tools`, `call` and `doctor` are the other pack commands. |
 | `hal-memory TOOL key=value ...` | Run any tool below, as `python3 -m halmem` does. |
 
 Every tool also runs through hal-hub as `hal-hub memory_<tool>`, and Claude Code reaches them

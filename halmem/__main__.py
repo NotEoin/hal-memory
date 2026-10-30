@@ -2,6 +2,8 @@
 
     hal-memory                            list the subcommands and tools
     hal-memory ask|index|brief|...        a subcommand (see below)
+    hal-memory mcp|tools|call|doctor      the pack commands of halhub: `mcp` serves the tools
+                                          over MCP stdio (no Hal core needed)
     hal-memory TOOL [key=value ...]       run a tool (the module prefix is optional)
     hal-memory --stdin FUNCTION           run a function with JSON arguments on stdin
 
@@ -13,8 +15,12 @@ import sys
 import tomllib
 from pathlib import Path
 
+from halhub import pack
+from halhub.cli import PACK_COMMANDS
+
 from . import cli, tools
 
+PACK = "memory"
 MANIFEST = Path(__file__).resolve().parent / "hal-module.toml"
 
 
@@ -38,6 +44,8 @@ def _show(result) -> None:
 
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv[:1] and argv[0] in PACK_COMMANDS:
+        return pack.main(PACK, (PACK,), argv)
     spec = tomllib.loads(MANIFEST.read_text())
     if argv[:1] == ["--stdin"]:
         _show(getattr(tools, argv[1])(**json.loads(sys.stdin.read() or "{}")))
