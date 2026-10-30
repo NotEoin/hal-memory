@@ -350,9 +350,26 @@ class SetupTest(Base):
             path_dir=self.fakes,
         )
 
+    def test_setup_leaves_mcp_json_alone_by_default(self):
+        before = self.mcp.read_text()
+        r = self.setup_cli()
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self.mcp.read_text(), before)
+        self.assertFalse((self.vault / ".mcp.json.bak").exists())
+        self.assertIn("hal-memory connect", r.stdout)
+
+    def test_connect_prints_config_for_each_harness(self):
+        for harness in ("claude", "codex", "opencode", "qwen", "goose", "hal", "json"):
+            r = self.run_cli("connect", harness)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(r.stdout.strip(), harness)
+        r = self.run_cli("connect", "json")
+        servers = json.loads(r.stdout)["mcpServers"]
+        self.assertEqual(servers["hal-memory"]["args"][-1], "mcp")
+
     def test_check_changes_nothing(self):
         before = self.mcp.read_text()
-        r = self.setup_cli("--check")
+        r = self.setup_cli("--check", "--write-mcp")
         self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
         self.assertIn("remove hal", r.stdout)
         self.assertEqual(self.mcp.read_text(), before)
@@ -361,7 +378,7 @@ class SetupTest(Base):
         self.assertFalse(self.pulls.exists())
 
     def test_setup_links_skills_merges_mcp_and_pulls(self):
-        r = self.setup_cli()
+        r = self.setup_cli("--write-mcp")
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         servers = json.loads(self.mcp.read_text())["mcpServers"]
         self.assertNotIn("hal", servers)
@@ -383,7 +400,7 @@ class SetupTest(Base):
         self.assertIn("pull embeddinggemma", self.pulls.read_text())
         # A second run finds nothing left to change.
         mcp = self.mcp.read_text()
-        r = self.setup_cli("--no-pull")
+        r = self.setup_cli("--no-pull", "--write-mcp")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.mcp.read_text(), mcp)
         self.assertFalse((self.skills / "ask.bak").exists())

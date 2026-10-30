@@ -9,7 +9,8 @@
     hal-memory import prepare [DIR] [--ocr] [--force]   extract text from every document, write SLIDES-REPORT.md
     hal-memory import extract pdf|docx|pptx|html [DIR] [--ocr] [--force]
     hal-memory register-repos [PATH ...] [--github URL [NAME]] [--depth N] [--refresh]
-    hal-memory setup [--check] [--commands-dir DIR] [--skills-dir DIR] [--bin-dir DIR] [--no-pull]
+    hal-memory setup [--check] [--commands-dir DIR] [--skills-dir DIR] [--bin-dir DIR] [--no-pull] [--write-mcp]
+    hal-memory connect claude|codex|opencode|qwen|goose|hal|json
     hal-memory skills list|install|remove [--target T]... [--mode link|copy] [--check] [--force]
     hal-memory obsidian-key KEY
     hal-memory TOOL [key=value ...]                       run any tool in hal-module.toml
@@ -198,14 +199,37 @@ def setup(argv: list[str]) -> int:
     )
     ap.add_argument("--bin-dir", help="where to link the hal-memory command (default ~/.local/bin)")
     ap.add_argument(
+        "--write-mcp",
+        action="store_true",
+        help="also merge the obsidian and hal-hub servers into <vault>/.mcp.json",
+    )
+    ap.add_argument(
         "--no-pull", action="store_true", help="skip checking and pulling the embedding model"
     )
     a = ap.parse_args(argv)
     from . import install
 
     return install.run(
-        a.check, a.commands_dir, a.bin_dir, pull=not a.no_pull, skills_dir=a.skills_dir
+        a.check,
+        a.commands_dir,
+        a.bin_dir,
+        pull=not a.no_pull,
+        skills_dir=a.skills_dir,
+        write_mcp=a.write_mcp,
     )
+
+
+def connect(argv: list[str]) -> int:
+    """`hal-memory connect HARNESS`: prints the MCP config that connects HARNESS to this pack."""
+    from . import connect as connecting
+
+    ap = argparse.ArgumentParser(
+        prog="hal-memory connect", description="Print the MCP config for a harness."
+    )
+    ap.add_argument("harness", choices=sorted(connecting.HARNESSES))
+    a = ap.parse_args(argv)
+    print(connecting.render(a.harness))
+    return 0
 
 
 def skills(argv: list[str]) -> int:
@@ -264,6 +288,7 @@ COMMANDS = {
     "register-repos": register_repos,
     "setup": setup,
     "skills": skills,
+    "connect": connect,
     "obsidian-key": obsidian_key,
 }
 

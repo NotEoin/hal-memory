@@ -254,10 +254,13 @@ def run(
     bin_dir: str | None = None,
     pull: bool = True,
     skills_dir: str | None = None,
+    write_mcp: bool = False,
 ) -> int:
     """Runs every setup step; returns the exit status (with check, 1 when anything is left to do).
 
     `commands_dir` is where the old setup linked slash commands; those links are removed.
+    The vault's `.mcp.json` is edited only with `write_mcp` (REQ-MEM-09); otherwise the person
+    is pointed at `hal-memory connect`.
     """
     commands = Path(
         commands_dir or os.environ.get("HAL_CLAUDE_COMMANDS", "~/.claude/commands")
@@ -268,7 +271,10 @@ def run(
     todo = install_skills(skills_dir, commands, check) + link_bin(bins, check) + check_tools()
     todo += embed_model(check) if pull else 0
     todo += make_vault(root, check)
-    todo += mcp_file(root / ".mcp.json", check) if root.is_dir() or not check else 0
+    if write_mcp:
+        todo += mcp_file(root / ".mcp.json", check) if root.is_dir() or not check else 0
+    else:
+        say("note", "left .mcp.json alone; run hal-memory connect HARNESS, or setup --write-mcp")
     if not key_file().exists():
         say("todo", "save the Obsidian Local REST API key: hal-memory obsidian-key KEY")
         todo += 1

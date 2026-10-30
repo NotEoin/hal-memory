@@ -45,7 +45,7 @@ step) and starts the idle sorter with Hal's other services. `hal-memory setup` i
 | Command | Symlinks `bin/hal-memory` into `~/.local/bin/`. |
 | Document tools | Reports missing `pdftotext`, `tesseract` and `pandoc` with the `apt-get` command; it never runs sudo. |
 | Embedding model | Pulls `[hal].embed_model` with `ollama pull` if it is missing. |
-| MCP servers | Merges `<vault>/.mcp.json`: adds `obsidian` (`uvx mcp-obsidian`) if missing, points `hal-hub` at its launcher, and removes the old `hal` server that ran `hal-mcp.py`. The previous file is kept as `.mcp.json.bak`. |
+| MCP servers | Only with `--write-mcp`; by default `.mcp.json` is left alone and `hal-memory connect HARNESS` prints the config to paste. With the flag it merges `<vault>/.mcp.json`: adds `obsidian` (`uvx mcp-obsidian`) if missing, points `hal-hub` at its launcher, and removes the old `hal` server that ran `hal-mcp.py`. The previous file is kept as `.mcp.json.bak`. |
 | Obsidian key | Reminds you to save the Local REST API key with `hal-memory obsidian-key KEY`. |
 
 `hal-memory setup --check` only reports, and exits 1 if anything is left to do.
@@ -66,7 +66,8 @@ step) and starts the idle sorter with Hal's other services. `hal-memory setup` i
 | `hal-memory import prepare [DIR] [--ocr] [--force]` | Extract text from every document and write `SLIDES-REPORT.md`. |
 | `hal-memory import extract pdf\|docx\|pptx\|html [DIR] [--ocr] [--force]` | Run one extractor. |
 | `hal-memory register-repos [PATH ...] [--github URL [NAME]] [--depth N] [--refresh]` | Add git repos to `Areas/Code/` as hub notes. |
-| `hal-memory setup [--check]` | See Install. |
+| `hal-memory setup [--check] [--write-mcp]` | See Install. |
+| `hal-memory connect claude\|codex\|opencode\|qwen\|goose\|hal\|json` | Print the MCP config that connects that harness to `hal-memory mcp`. The codex, opencode, qwen and goose shapes are unverified. |
 | `hal-memory obsidian-key KEY` | Save the Obsidian Local REST API key to `~/.config/hal/obsidian_api_key` (mode 600). |
 | `hal-memory mcp` | Serve the 15 memory tools over MCP stdio, through halhub's pack runner; needs no Hal core. `tools`, `call` and `doctor` are the other pack commands. |
 | `hal-memory TOOL key=value ...` | Run any tool below, as `python3 -m halmem` does. |
