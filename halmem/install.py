@@ -37,6 +37,7 @@ OBSIDIAN = {
 
 
 def say(kind: str, text: str) -> None:
+    """Prints one setup step with its status."""
     print(f"  {kind:6} {text}", flush=True)
 
 

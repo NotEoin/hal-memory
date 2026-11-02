@@ -61,6 +61,7 @@ SYSTEM_NOTES = {"readme", "claude", "claude-archive", "start here", "home"}
 
 
 def issues_for(path: Path, links: set[str], backlinks: int) -> list[str]:
+    """Returns the quality problems of one note given its links and backlink count."""
     if path.stem.lower() in SYSTEM_NOTES:
         return []
     text = path.read_text(errors="ignore")

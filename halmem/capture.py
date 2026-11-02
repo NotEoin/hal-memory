@@ -78,6 +78,7 @@ def _daily_link(day: str, stem: str) -> None:
 
 
 def profile_path() -> Path:
+    """Returns the profile note, creating it with a header when missing."""
     path = vault.inside(Path(settings()["profile_note"]))
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)

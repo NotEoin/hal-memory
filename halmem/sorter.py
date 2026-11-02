@@ -36,6 +36,7 @@ ENTITY_FOLDERS = {
 
 
 def inbox() -> Path:
+    """Returns the inbox folder inside the vault."""
     return vault.inside(Path(settings()["inbox"]))
 
 

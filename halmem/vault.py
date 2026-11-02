@@ -17,6 +17,7 @@ SKIP_DIRS = {".obsidian", ".trash", ".git", ".claude", "_Import-Staging", "node_
 
 
 def root() -> Path:
+    """Returns the vault folder."""
     return vault()
 
 
@@ -30,6 +31,7 @@ def inside(path: Path) -> Path:
 
 
 def rel(path: Path) -> str:
+    """Returns a path relative to the vault root."""
     return str(Path(path).resolve().relative_to(root().resolve()))
 
 
@@ -104,6 +106,7 @@ def set_fields(text: str, updates: dict) -> str:
 
 
 def title_of(path: Path) -> str:
+    """Returns a note's title, which is its file stem."""
     return Path(path).stem
 
 
@@ -122,10 +125,12 @@ def write_new(folder: str, title: str, body: str, meta: dict) -> Path:
 
 
 def today() -> str:
+    """Returns today's local date as `YYYY-MM-DD`."""
     return datetime.now().strftime("%Y-%m-%d")
 
 
 def now() -> str:
+    """Returns the local time as `YYYY-MM-DDTHH:MM`."""
     return datetime.now().strftime("%Y-%m-%dT%H:%M")
 
 

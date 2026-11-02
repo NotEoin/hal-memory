@@ -101,6 +101,7 @@ def run_pass(check_idle: bool = True) -> list[dict]:
 
 
 def main() -> None:
+    """Waits for idle time and runs a pass each poll; `--once` runs one pass now. Exits with `NO_IDLE_MONITOR_EXIT` under WSL2 when idleness cannot be measured."""
     if "--once" not in sys.argv and settings()["idle_minutes"] > 0:
         if hostplatform.is_wsl2() and measure_idle() is None:
             # WSLg has no GNOME idle monitor, so idle time reads 0 and no pass would ever start

@@ -74,22 +74,27 @@ OFF = "\033[0m"
 
 
 def hal(msg):
+    """Prints a progress heading."""
     print(f"{BLUE}{msg}{OFF}", flush=True)
 
 
 def ok(msg):
+    """Prints a success line."""
     print(f"{GREEN}  [ok] {msg}{OFF}", flush=True)
 
 
 def tick(msg):
+    """Prints a plain progress line."""
     print(f"  {msg}", flush=True)
 
 
 def warn(msg):
+    """Prints a warning line."""
     print(f"{YELLOW}  ! {msg}{OFF}", flush=True)
 
 
 def err(msg):
+    """Prints a failure line."""
     print(f"{RED}  [fail] {msg}{OFF}", flush=True)
 
 
@@ -184,6 +189,7 @@ def summarise_text(title, course, role, text, model, mock=False):
 
 
 def note_prompt(title, course, role, text):
+    """Builds the model prompt for one document, by its role."""
     role_hint = {
         "exercise": (
             "This is an exercise / problem sheet. Capture the problems it sets and the "
@@ -225,6 +231,7 @@ def note_prompt(title, course, role, text):
 
 
 def chunk_text(text, size):
+    """Splits a text into pieces of at most `size` characters."""
     if len(text) <= size:
         return [text]
     out, buf = [], ""
@@ -269,20 +276,24 @@ def parse_year_course(relpath):
 
 
 def course_code(course):
+    """Returns the course code found in a course name, or an empty string."""
     m = re.search(r"\b([A-Z]{2,4}\d{3,4})\b", course)
     return m.group(1) if m else ""
 
 
 def clean_course_name(course):
+    """Returns a course name without its trailing code."""
     name = re.sub(COURSE_CODE_SUFFIX, "", course).strip()
     return name or course
 
 
 def course_slug(course):
+    """Returns a file-name-safe form of a course name."""
     return re.sub(r"[^a-z0-9]+", "-", course.lower()).strip("-") or "misc"
 
 
 def classify_role(filename):
+    """Returns the role of a document from its file name, such as `exam`."""
     n = filename.lower()
     if "exam" in n:
         return "exam"
@@ -318,6 +329,7 @@ def dedup_base(filename):
 
 
 def clean_title(stem, code):
+    """Returns a note title from a file stem, without the course code prefix."""
     t = stem
     if code and t.lower().startswith(code.lower()):
         t = t[len(code) :]
@@ -328,6 +340,7 @@ def clean_title(stem, code):
 
 
 def index_link(code, cname):
+    """Returns the title of a course's index note."""
     return f"{code} Index" if code else f"{cname} Index"
 
 
@@ -469,6 +482,7 @@ def parse_report(report_path, vault):
 
 # ---- Resume index: what's already summarised --------------------------------
 def read_frontmatter(md_path):
+    """Returns the frontmatter fields of a Markdown file, or an empty dict."""
     out = {}
     try:
         head = md_path.read_text(encoding="utf-8", errors="ignore")[:2000]
@@ -500,6 +514,7 @@ def build_done_index(vault):
 
 # ---- Writing one note -------------------------------------------------------
 def safe_mtime_date(path):
+    """Returns a file's modification date, or an empty string when it cannot be read."""
     try:
         return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d")
     except OSError:
@@ -507,6 +522,7 @@ def safe_mtime_date(path):
 
 
 def write_note(vault, row, scan_dir, body):
+    """Writes the summary note of one document and returns its path."""
     year = row["year"]
     course_folder = row["course_folder"]
     code = row["code"]
@@ -833,6 +849,7 @@ def build_university_index(vault):
 
 # ---- Session log so the work lands in the second brain ----------------------
 def write_session_log(vault, created, skipped, failed, unreadable, deduped, per_course, started):
+    """Writes a log of one summariser run into the vault."""
     try:
         logdir = vault / "Areas" / "Work" / "Session-Logs"
         logdir.mkdir(parents=True, exist_ok=True)
@@ -868,6 +885,7 @@ def write_session_log(vault, created, skipped, failed, unreadable, deduped, per_
 
 # ---- Main -------------------------------------------------------------------
 def main(argv=None):
+    """Runs `hal-memory summarize`."""
     ap = argparse.ArgumentParser(
         prog="hal-memory summarize", description="Hal's self-resuming slide summariser."
     )

@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 
 
 def remember(text: str, title: str = "", tags: list[str] | None = None) -> dict:
+    """Saves a note to the inbox and returns where it went."""
     p = capture.remember(text, title, tags)
     return {
         "saved": vault.rel(p),
@@ -21,14 +22,17 @@ def remember(text: str, title: str = "", tags: list[str] | None = None) -> dict:
 
 
 def remember_fact(fact: str) -> str:
+    """Adds a lasting fact to the profile note."""
     return capture.add_fact(fact)
 
 
 def profile() -> str:
+    """Returns the profile note's facts."""
     return capture.facts()
 
 
 def search_notes(query: str, limit: int = 8) -> list[dict]:
+    """Searches the vault by keyword and by meaning."""
     return search.search(query, int(limit))
 
 
@@ -69,6 +73,7 @@ def read(note: str) -> dict:
 
 
 def append(note: str, text: str) -> dict:
+    """Appends text to an existing note."""
     found = read(note)
     if "error" in found:
         return found
@@ -78,15 +83,18 @@ def append(note: str, text: str) -> dict:
 
 
 def log_conversation(user: str, assistant: str, channel: str = "voice") -> str:
+    """Appends one exchange to the day's conversation log and returns its path."""
     return vault.rel(capture.log_conversation(user, assistant, channel))
 
 
 def daily(date: str = "") -> dict:
+    """Returns a day's daily note, creating it when missing."""
     p = capture.daily_note(date or None)
     return {"path": vault.rel(p), "text": p.read_text()}
 
 
 def sort_inbox(limit: int = 10) -> list[dict]:
+    """Sorts up to `limit` inbox notes and returns what was done with each."""
     return sorter.sort(int(limit))
 
 
@@ -115,6 +123,7 @@ def tidy(limit: int = 25) -> dict:
 
 
 def status() -> dict:
+    """Returns the vault path, the inbox size, the audit counts and the last pass."""
     inbox = sorter.pending()
     last = data_dir() / "last-pass.json"
     return {
@@ -126,6 +135,7 @@ def status() -> dict:
 
 
 def update_index(limit: int = 400) -> dict:
+    """Updates the semantic index for up to `limit` notes."""
     return search.update_index(int(limit))
 
 

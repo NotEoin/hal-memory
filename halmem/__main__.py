@@ -43,6 +43,7 @@ def _show(result) -> None:
 
 
 def main(argv=None) -> int:
+    """Runs a pack command through hal-hub, or a `hal-memory` subcommand, and returns the exit code."""
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv[:1] and argv[0] in PACK_COMMANDS:
         return pack.main(PACK, (PACK,), argv)

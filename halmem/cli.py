@@ -64,6 +64,7 @@ def _script(name: str, args: list[str]) -> int:
 
 
 def ask(argv: list[str]) -> int:
+    """Handles `hal-memory ask`: answers a question from the vault."""
     ap = argparse.ArgumentParser(
         prog="hal-memory ask", description="Answer a question from the vault, with citations."
     )
@@ -101,6 +102,7 @@ def ask(argv: list[str]) -> int:
 
 
 def index(argv: list[str]) -> int:
+    """Handles `hal-memory index`: updates the semantic search index."""
     ap = argparse.ArgumentParser(
         prog="hal-memory index", description="Update the semantic search index."
     )
@@ -128,6 +130,7 @@ def index(argv: list[str]) -> int:
 
 
 def brief(argv: list[str]) -> int:
+    """Handles `hal-memory brief`: writes the morning brief."""
     ap = argparse.ArgumentParser(
         prog="hal-memory brief", description="Write today's morning brief into the daily note."
     )
@@ -157,12 +160,14 @@ def brief(argv: list[str]) -> int:
 
 
 def summarize(argv: list[str]) -> int:
+    """Handles `hal-memory summarize`: turns imported slide decks into study notes."""
     from . import summarize as runner
 
     return runner.main(argv) or 0
 
 
 def import_(argv: list[str]) -> int:
+    """Handles `hal-memory import`: stages an old vault and prepares its documents."""
     usage = (
         "usage: hal-memory import stage OLD_VAULT [--dry-run]\n"
         "       hal-memory import prepare [DIR] [--ocr] [--force]\n"
@@ -182,10 +187,12 @@ def import_(argv: list[str]) -> int:
 
 
 def register_repos(argv: list[str]) -> int:
+    """Handles `hal-memory register-repos`: runs the repo registration script."""
     return _script("register-repos.sh", argv)
 
 
 def setup(argv: list[str]) -> int:
+    """Handles `hal-memory setup`: installs or checks the pack's pieces."""
     ap = argparse.ArgumentParser(
         prog="hal-memory setup", description="Install or check hal-memory's commands and tools."
     )
@@ -270,6 +277,7 @@ def skills(argv: list[str]) -> int:
 
 
 def obsidian_key(argv: list[str]) -> int:
+    """Handles `hal-memory obsidian-key KEY`: stores the Local REST API key."""
     if len(argv) != 1 or argv[0].startswith("-"):
         print("usage: hal-memory obsidian-key KEY", file=sys.stderr)
         return 2
