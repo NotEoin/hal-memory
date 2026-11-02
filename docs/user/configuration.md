@@ -5,7 +5,7 @@ models in `[hal]`:
 
 ```toml
 [hal]
-vault = "~/Documents/vaults/Hal"
+vault = "~/notes"
 chat_model = "qwen3.5:9b"
 embed_model = "embeddinggemma"
 user_name = ""          # your name in conversation logs and the profile; empty means "You"

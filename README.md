@@ -1,48 +1,62 @@
 # hal-memory
 
-hal-memory gives Hal a lasting memory in one Obsidian vault. Anything Hal is told to remember
-lands in the inbox at once; while the computer is idle, a local model files, titles, tags and links
-it, and quality passes keep every note in the vault linked and findable. It also brings outside
-material in (old vaults, lecture slides, code repos), writes a morning brief, and ships the Claude
-Code slash commands that work on the vault.
+> *Stop small local models from making things up.*
 
-## Highlights
+hal-memory gives Hal a memory in an Obsidian vault, and answers from it with `[[citations]]` you
+can click. Tell Hal to remember something and it lands in the inbox at once; while the computer is
+idle, a local model files, titles, tags and links it. Ask a question and hal-memory searches by
+keyword and by meaning, then hands the model only the notes that matter, so a small model with a
+short context answers from your notes instead of guessing.
 
-- Instant capture to `+Inbox/`, with no model in the way.
-- Idle-time sorter: classifies each note, files it by category, creates notes for the people,
-  organisations, places, projects and topics it mentions, and links them.
-- Confidence from the classifier; doubtful filings are marked `hal: needs-review` and re-checked
-  by the next pass.
-- Wikilink pass: the first mention of any existing note's title or alias becomes a `[[link]]`,
+## What it does
+
+- Captures anything Hal is told to remember into `+Inbox/` at once, with no model in the way.
+- While the computer is idle, a local model classifies each note, files it by category, creates
+  notes for the people, organisations, places, projects and topics it mentions, and links them.
+  Doubtful filings are marked `hal: needs-review` and re-checked by the next pass.
+- A wikilink pass turns the first mention of an existing note's title or alias into a `[[link]]`,
   never inside code, URLs, headings or existing links.
-- Quality audit: notes without links, without frontmatter or with no backlinks are recorded and
-  fixed in later passes, using semantic neighbours and folder index notes.
-- Search by keyword and by meaning (local embeddings), merged by rank, so new notes are found
-  before the index catches up.
-- Recall: questions answered from the vault with `[[citations]]`, by the local model or by
-  Claude Code.
-- Import: old vaults staged and inventoried, text pulled from PDF, DOCX, PPTX and HTML, and an
-  unattended summariser that turns slide decks into linked study notes.
-- A morning brief written into the daily note.
-- Conversation logs, daily notes and a profile note of lasting facts about the owner.
+- A quality audit records notes without links, frontmatter or backlinks and fixes them in later
+  passes.
+- Searches by keyword and by meaning (local embeddings) and merges the two by rank, so new notes
+  are found before the index catches up.
+- Answers questions from the vault with `[[citations]]`, by the local model or by Claude Code.
+- Imports old vaults, PDF, DOCX, PPTX and HTML files, and turns slide decks into linked study notes.
+- Writes a morning brief into the daily note, keeps conversation logs and a profile note of lasting
+  facts about the owner.
+
+## Part of the Hal suite
+
+hal-memory is one part of [Hal](https://github.com/NotEoin/Hal), a modular AI assistant that runs on
+your own machine, built privacy and security first. Around Hal,
+[hal-tools](https://github.com/NotEoin/hal-tools) adds the tools of a desktop assistant,
+[hal-voice](https://github.com/NotEoin/hal-voice) a voice,
+[gpu-light](https://github.com/NotEoin/gpu-light) a fair share of the GPU, and
+[hal-employment](https://github.com/NotEoin/hal-employment) a job-search helper. Each repo
+works on its own; installed together they make one assistant. See [how it fits
+together](https://github.com/NotEoin/Hal#how-it-fits-together).
+
+## Requirements
+
+- Linux, or Windows 11 through WSL2 ([how-to](docs/howto/run-on-windows-with-wsl2.md)). Native
+  Windows and macOS are unsupported.
+- Python 3.11 or later.
+- [Hal](https://github.com/NotEoin/Hal), whose gateway serves a chat model and an embedding model.
+  Standalone, Ollama can serve both.
+- An Obsidian vault (any folder of Markdown notes works).
+- Optional: numpy for faster semantic search; `pdftotext`, `tesseract` and `pandoc` for document
+  import, and `python-pptx` for PowerPoint files.
 
 ## Install
 
-hal-memory runs on Linux. Windows works through WSL2 (see
-[docs/howto/run-on-windows-with-wsl2.md](docs/howto/run-on-windows-with-wsl2.md)); native Windows and
-macOS are unsupported.
-
-hal-memory needs Python 3.11 or later, the Hal gateway (or, standalone, Ollama) with an embedding model and a chat model, and an
-Obsidian vault. numpy makes semantic search faster but is optional. Importing documents uses
-`pdftotext`, `tesseract` and `pandoc` (and `python-pptx` for PowerPoint files).
-
 ```bash
 hal packs add memory        # or: hal packs add --local PATH for a checkout
-hal packs setup memory      # runs its install steps, each shown and confirmed
+hal packs setup memory      # runs `hal-memory setup`; each step is shown and confirmed
+hal units install           # the idle sorter then starts with Hal's other services
 ```
 
-That installs the pack, runs `hal-memory setup` (its install
-step). After `hal units install`, the idle sorter starts with Hal's other services. The unit runs `@PYTHON@ -m halmem.idle`, where Hal's unit renderer fills in the Python that has hal-memory installed. `hal-memory setup` is safe to re-run. It:
+The unit runs `@PYTHON@ -m halmem.idle`; Hal's unit renderer fills in the Python that has
+hal-memory installed. `hal-memory setup` is safe to re-run. It does the following:
 
 | Step | What it does |
 | --- | --- |
@@ -56,16 +70,6 @@ step). After `hal units install`, the idle sorter starts with Hal's other servic
 `hal-memory setup --check` only reports, and exits 1 if anything is left to do.
 `--commands-dir`, `--skills-dir`, `--bin-dir` and `--no-pull` change or skip those steps.
 
-## Use
-
-`hal-memory` runs from anywhere. See [commands](docs/user/commands.md), [tools](docs/user/tools.md) and
-[configuration](docs/user/configuration.md); the full list is in the [docs index](docs/README.md).
-
-## Skills
-
-`skills/` holds 12 Agent Skills for the vault. See [skills](docs/user/skills.md) and the how-to
-[install the skills](docs/howto/install-skills.md).
-
 ## Privacy and safety
 
 | Path | Private? | Notes |
@@ -77,17 +81,30 @@ step). After `hal units install`, the idle sorter starts with Hal's other servic
 A note name given to a tool must resolve inside the vault; `..` and symlinks that leave it are
 refused. Setup never edits `.mcp.json` unless you pass `--write-mcp`. See [SECURITY.md](SECURITY.md).
 
-## Run and test
+## Run
 
 ```bash
 hal-memory ask "What did I decide about caching?"   # answer from the vault
+hal-memory index                                    # update the search index
+hal-memory brief                                    # write today's morning brief
 hal-memory mcp                                      # serve the tools over MCP stdio
-python -m pytest -q                                 # hermetic tests, see docs/dev/testing.md
 ```
 
-## Contributing
+The commands are in [commands](docs/user/commands.md), the tools in [tools](docs/user/tools.md)
+and the settings in [configuration](docs/user/configuration.md). `skills/` holds 12 Agent Skills
+for the vault; see [skills](docs/user/skills.md) and [install the skills](docs/howto/install-skills.md).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Changes are listed in
+## Test
+
+```bash
+python -m pytest -q                       # hermetic tests, see docs/dev/testing.md
+ruff check . && ruff format --check .     # lint and format
+```
+
+## Documentation
+
+The [docs index](docs/README.md) lists every page. To contribute, see
+[CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Changes are listed in
 [CHANGELOG.md](CHANGELOG.md).
 
 ## Licence
