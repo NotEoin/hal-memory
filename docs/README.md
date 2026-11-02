@@ -10,6 +10,7 @@
 | [howto/connect-a-harness.md](howto/connect-a-harness.md) | Connect a harness to the MCP server |
 | [howto/import-documents.md](howto/import-documents.md) | Import old notes and slides |
 | [howto/run-idle-sorting.md](howto/run-idle-sorting.md) | Run idle sorting |
+| [howto/run-on-windows-with-wsl2.md](howto/run-on-windows-with-wsl2.md) | Run hal-memory on Windows 11 through WSL2 |
 | [dev/architecture.md](dev/architecture.md) | How it works and how to change it |
 | [dev/testing.md](dev/testing.md) | Run the tests and the CI checks |
 | [dev/migrating.md](dev/migrating.md) | Where the old Hal vault tools went |

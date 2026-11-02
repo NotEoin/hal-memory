@@ -46,6 +46,54 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}
 
+  wsl:
+    name: wsl2 (ubuntu 24.04)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    # Never run yet: it stays advisory until the first green run shows the suite passes under
+    # WSL2, so an unproven runner cannot block a merge
+    continue-on-error: true
+    steps:
+      - name: Keep line endings as LF
+        # The ingest scripts are shell; a CRLF shebang line would not run in WSL
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: Vampire/setup-wsl@4c48163d9f981914dd8caa0fc335fe19cca5bff4 # v7.2.0
+        with:
+          distribution: Ubuntu-24.04
+          additional-packages: pipx python3-venv git
+
+      - name: Copy the checkout into the WSL filesystem
+        # /mnt/d has no Unix permissions, and the suite checks modes
+        shell: wsl-bash {0}
+        run: |
+          src="$(wslpath -u "$GITHUB_WORKSPACE" 2>/dev/null || printf %s "$GITHUB_WORKSPACE")"
+          rm -rf "$HOME/hal-memory"
+          cp -r "$src" "$HOME/hal-memory"
+
+      - name: Install uv
+        shell: wsl-bash {0}
+        run: |
+          pipx install uv==0.8.0
+          "$HOME/.local/bin/uv" --version
+
+      - name: Test
+        # Same hermetic run as the test job: fakes only, no network, GPU or models
+        shell: wsl-bash {0}
+        run: |
+          export PATH="$HOME/.local/bin:$PATH" UV_PYTHON_DOWNLOADS=never
+          cd "$HOME/hal-memory"
+          uv venv
+          uv pip install pytest 'hatchling>=1.25,<2' \
+            "hal-kit @ git+https://github.com/NotEoin/Hal.git@${HAL_REF}#subdirectory=packages/hal-kit" \
+            "hal-hub @ git+https://github.com/NotEoin/Hal.git@${HAL_REF}#subdirectory=packages/hal-hub"
+          PYTHONPATH="$PWD" .venv/bin/python -m pytest -q
+
   gitleaks:
     runs-on: ubuntu-latest
     steps:

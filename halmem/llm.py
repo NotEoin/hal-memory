@@ -19,6 +19,7 @@ from collections.abc import Iterator, Mapping, Sequence
 
 from halkit import llm as kitllm
 
+from . import hostplatform
 from .config import shared
 
 log = logging.getLogger(__name__)
@@ -31,6 +32,9 @@ EMBED_ALIAS = "hal-embed"
 RETRY_PAUSE = 3.0  # seconds, times the attempt number
 JSON_HINT = "\n\nReply with one JSON object and nothing else."
 FENCE = re.compile(r"^```[a-zA-Z]*\n(.*?)\n?```$", re.S)
+
+# What `nvidia-smi` prints for a process it cannot name, as WSL2 does for Windows processes
+UNNAMED_PROCESS = ("[N/A]", "N/A", "[Not Found]")
 
 # Hal's own GPU users: Ollama, the voice server and speech recognition.
 OWN = ("ollama", "GPT-SoVITS", "api_v2.py", "hal-voice", "halvoice", "faster_whisper")
@@ -49,8 +53,11 @@ def gpu_busy() -> str | None:
         return None
     ignore = OWN + tuple(shared().get("gpu_ignore", []))
     others = []
+    wsl2 = hostplatform.is_wsl2()
     for line in out.splitlines():
         pid, _, name = line.partition(",")
+        if wsl2 and name.strip() in UNNAMED_PROCESS:
+            continue  # a Windows process cannot be told apart from Hal's own, so it is not counted
         try:
             cmd = (
                 open(f"/proc/{pid.strip()}/cmdline", "rb")

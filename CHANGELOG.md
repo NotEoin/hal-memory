@@ -4,6 +4,10 @@ All notable changes are listed here, newest first.
 
 ## 0.1.0 - unreleased
 
+- WSL2 support: `halmem.hostplatform` detects it (`HALMEM_OSRELEASE` fakes it in tests). The idle
+  daemon stops with advice when no desktop idle monitor exists (exit 78, no restart), the GPU guard
+  ignores unnamed `nvidia-smi` processes, and `hal-memory setup` warns about a vault under `/mnt/c`.
+  New how-to: `docs/howto/run-on-windows-with-wsl2.md`. A `wsl` CI job runs the test suite.
 - Packaging: `pyproject.toml`, the `hal-memory` command, the `hal.packs` entry point, CI with
   ruff, an ASCII gate, tests on Python 3.11 to 3.13 and gitleaks.
 - Model calls go through `halkit.llm` (gateway aliases `hal-chat`, `hal-embed`). `HAL_CHAT_API`

@@ -12,7 +12,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import skillsinstall
+from . import hostplatform, skillsinstall
 from .config import shared, vault
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -248,6 +248,22 @@ def install_skills(skills_dir: str | None, commands: Path, check: bool) -> int:
     return todo
 
 
+def check_wsl2(root: Path) -> int:
+    """Under WSL2, warns when the vault is on a Windows drive; returns 1 for a warning."""
+    if not hostplatform.is_wsl2():
+        return 0
+    say("ok", "WSL2 detected")
+    if hostplatform.on_windows_drive(root):
+        say(
+            "warn",
+            f"the vault {root} is on a Windows drive: indexing and sorting are slow there. "
+            f"Keep it in the Linux filesystem and open it from Windows at \\\\wsl$ "
+            f"(see {hostplatform.DOCS_HINT})",
+        )
+        return 1
+    return 0
+
+
 def run(
     check: bool = False,
     commands_dir: str | None = None,
@@ -271,6 +287,7 @@ def run(
     todo = install_skills(skills_dir, commands, check) + link_bin(bins, check) + check_tools()
     todo += embed_model(check) if pull else 0
     todo += make_vault(root, check)
+    todo += check_wsl2(root)
     if write_mcp:
         todo += mcp_file(root / ".mcp.json", check) if root.is_dir() or not check else 0
     else:

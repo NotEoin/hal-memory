@@ -17,14 +17,21 @@ import subprocess
 import sys
 import time
 
-from . import audit, llm, search, sorter
+from . import audit, hostplatform, llm, search, sorter
 from .config import data_dir, settings
 
 POLL = 60  # seconds
+NO_IDLE_MONITOR_EXIT = 78  # EX_CONFIG; the unit's RestartPreventExitStatus stops a restart loop
 
 
 def idle_seconds() -> float:
     """Returns how long the desktop has been idle, or 0 when it cannot tell."""
+    measured = measure_idle()
+    return 0.0 if measured is None else measured
+
+
+def measure_idle() -> float | None:
+    """Returns the desktop's idle seconds, or None when neither monitor answers."""
     try:
         out = subprocess.run(
             [
@@ -51,7 +58,7 @@ def idle_seconds() -> float:
             / 1000
         )
     except (OSError, ValueError, subprocess.SubprocessError):
-        return 0.0
+        return None
 
 
 def steps(batch: int):
@@ -94,6 +101,16 @@ def run_pass(check_idle: bool = True) -> list[dict]:
 
 
 def main() -> None:
+    if "--once" not in sys.argv and settings()["idle_minutes"] > 0:
+        if hostplatform.is_wsl2() and measure_idle() is None:
+            # WSLg has no GNOME idle monitor, so idle time reads 0 and no pass would ever start
+            print(
+                "hal-memory idle: this WSL2 distro has no desktop idle monitor, so idleness "
+                "cannot be measured. Set idle_minutes = 0 in [memory] to sort at any time, or "
+                f"run `hal-memory sort` by hand (see {hostplatform.DOCS_HINT})",
+                file=sys.stderr,
+            )
+            sys.exit(NO_IDLE_MONITOR_EXIT)
     if "--once" in sys.argv:
         print(json.dumps(run_pass(check_idle=False), indent=1, default=str))
         return
