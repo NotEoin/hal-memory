@@ -29,9 +29,9 @@ packages = ["halmem"]
 "skills" = "halmem/skills"
 
 [tool.uv.sources]
-# Development: sibling Hal worktree. A release replaces these with git tag sources.
-hal-kit = { path = "../Hal.next/packages/hal-kit", editable = true }
-hal-hub = { path = "../Hal.next/packages/hal-hub", editable = true }
+# hal-kit and hal-hub are not on PyPI yet; they come from a Hal checkout beside this one.
+hal-kit = { path = "../Hal/packages/hal-kit", editable = true }
+hal-hub = { path = "../Hal/packages/hal-hub", editable = true }
 
 [dependency-groups]
 dev = ["pytest>=8.3,<10", "ruff>=0.15,<1", "hatchling>=1.25,<2"]
