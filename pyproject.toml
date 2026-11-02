@@ -27,7 +27,6 @@ packages = ["halmem"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "skills" = "halmem/skills"
-"systemd" = "halmem/systemd"
 
 [tool.uv.sources]
 # Development: sibling Hal worktree. A release replaces these with git tag sources.

@@ -13,7 +13,7 @@ manifest (`halmem/hal-module.toml`, schema 2, `pack = "memory"`).
 | Models | `halmem/llm.py` | Chat and embeddings through `halkit.llm` (gateway aliases `hal-chat`, `hal-embed`); retries and the GPU guard. |
 | Skills | `skills/`, `halmem/skillsinstall.py` | The 12 Agent Skills and their installer. |
 | Setup | `halmem/install.py`, `halmem/connect.py` | `setup` and `connect`. |
-| Idle service | `halmem/idle.py`, `systemd/hal-memory-idle.service` | Sorting passes while the desktop is idle. |
+| Idle service | `halmem/idle.py`, `halmem/systemd/hal-memory-idle.service` | Sorting passes while the desktop is idle. |
 
 Decisions:
 

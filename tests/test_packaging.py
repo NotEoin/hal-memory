@@ -39,6 +39,15 @@ def test_wheel_contains_manifest_and_script(wheel):
 
 
 def test_idle_unit_runs_from_the_package_python():
-    unit = (ROOT / "systemd" / "hal-memory-idle.service").read_text()
+    unit = (ROOT / "halmem" / "systemd" / "hal-memory-idle.service").read_text()
     assert "ExecStart=@PYTHON@ -m halmem.idle" in unit
     assert "/usr/bin/python3" not in unit
+
+
+def test_every_manifest_unit_file_exists_beside_the_manifest():
+    # regression: the manifest named halmem/systemd/... while the file sat in the repo's systemd/
+    import tomllib
+
+    manifest = ROOT / "halmem" / "hal-module.toml"
+    for unit in tomllib.loads(manifest.read_text()).get("units", []):
+        assert (manifest.parent / unit["file"]).is_file(), unit["file"]
