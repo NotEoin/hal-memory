@@ -33,11 +33,12 @@ Obsidian vault. numpy makes semantic search faster but is optional. Importing do
 `pdftotext`, `tesseract` and `pandoc` (and `python-pptx` for PowerPoint files).
 
 ```bash
-hal ext add memory
+hal packs add memory        # or: hal packs add --local PATH for a checkout
+hal packs setup memory      # runs its install steps, each shown and confirmed
 ```
 
-That clones it into the ecosystem's `extensions/` folder, runs `hal-memory setup` (its install
-step) and starts the idle sorter with Hal's other services. The unit runs `@PYTHON@ -m halmem.idle`, where Hal's unit renderer fills in the Python that has hal-memory installed. `hal-memory setup` is safe to re-run. It:
+That installs the pack, runs `hal-memory setup` (its install
+step). After `hal units install`, the idle sorter starts with Hal's other services. The unit runs `@PYTHON@ -m halmem.idle`, where Hal's unit renderer fills in the Python that has hal-memory installed. `hal-memory setup` is safe to re-run. It:
 
 | Step | What it does |
 | --- | --- |

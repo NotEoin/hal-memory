@@ -5,7 +5,7 @@ While the computer is idle, hal-memory files the inbox, links notes, audits and 
 1. Install the unit with Hal. The unit runs `@PYTHON@ -m halmem.idle`.
 
    ```bash
-   hal ext add memory          # clones, runs setup and installs the unit
+   hal packs add memory        # installs the pack; then hal packs setup memory and hal units install
    ```
 
 2. Run one full pass by hand to see it work.

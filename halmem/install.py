@@ -136,7 +136,7 @@ def embed_model(check: bool) -> int:
 
 
 def hub_command() -> str | None:
-    """Returns the hal-hub launcher: the one on the PATH, else the ecosystem copy beside this module."""
+    """Returns the hal-hub launcher: the one on the PATH, else the copy of the older hal-ecosystem layout beside this module."""
     found = shutil.which("hal-hub")
     if found:
         return found
