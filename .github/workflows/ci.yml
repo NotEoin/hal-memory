@@ -53,6 +53,9 @@ jobs:
     # Never run yet: it stays advisory until the first green run shows the suite passes under
     # WSL2, so an unproven runner cannot block a merge
     continue-on-error: true
+    env:
+      # WSL does not inherit the runner environment: WSLENV names what to pass in (/p converts a path)
+      WSLENV: GITHUB_WORKSPACE/p:HAL_REF
     steps:
       - name: Keep line endings as LF
         # The ingest scripts are shell; a CRLF shebang line would not run in WSL
