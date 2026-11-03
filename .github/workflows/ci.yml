@@ -9,7 +9,7 @@ permissions:
 
 env:
   GITLEAKS_VERSION: "8.30.1"
-  HAL_REF: main
+  HAL_REF: v0.1.0
 
 jobs:
   lint:
@@ -36,7 +36,7 @@ jobs:
           version: "0.11.19"
           python-version: ${{ matrix.python }}
       # hal-kit and hal-hub are not on PyPI in this release; they install from the Hal repository
-      # at a tag (the release step pins HAL_REF to v0.1.0).
+      # at a tag.
       # setup-uv already made .venv for python-version; --clear rebuilds it instead of failing
       - run: |
           uv venv --clear

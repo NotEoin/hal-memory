@@ -2,7 +2,7 @@
 
 All notable changes are listed here, newest first.
 
-## 0.1.0 - unreleased
+## 0.1.0 - 2026-11-03
 
 - Docs: the README lists requirements, install, run and test; the skills and docs no longer use `--` as a dash; the example vault path is `~/notes`.
 - WSL2 support: `halmem.hostplatform` detects it (`HALMEM_OSRELEASE` fakes it in tests). The idle
