@@ -37,8 +37,9 @@ jobs:
           python-version: ${{ matrix.python }}
       # hal-kit and hal-hub are not on PyPI in this release; they install from the Hal repository
       # at a tag (the release step pins HAL_REF to v0.1.0).
+      # setup-uv already made .venv for python-version; --clear rebuilds it instead of failing
       - run: |
-          uv venv
+          uv venv --clear
           uv pip install pytest 'hatchling>=1.25,<2' \
             "hal-kit @ git+https://github.com/NotEoin/Hal.git@${HAL_REF}#subdirectory=packages/hal-kit" \
             "hal-hub @ git+https://github.com/NotEoin/Hal.git@${HAL_REF}#subdirectory=packages/hal-hub"
